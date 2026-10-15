@@ -13,6 +13,8 @@ Train your ability to visualize a chain of moves.
 
 Lines get one half-move longer per level (level 1 = 2 half-moves, level 15 = 16). Solve 3 lines in a row on the first check to level up. Settings let you hide the move list once you start moving, auto-check, auto-advance to the next line, and turn auto level-up on or off. Progress is saved in the browser.
 
+To think through a line, right-click a square to highlight it or right-drag to draw an arrow (green by default; hold Shift for red, Alt for blue, Shift+Alt for yellow). Repeat the same mark to remove it; left-click the board or press Esc to clear them all.
+
 ## Development
 
 ```sh

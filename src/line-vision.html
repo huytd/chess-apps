@@ -12,6 +12,7 @@
   --sq-light:#E9E3D1; --sq-dark:#8297A9; --hl:rgba(255,206,64,.55);
   --good:#1D8650; --good-soft:rgba(29,134,80,.12); --bad:#C2342A; --bad-soft:rgba(194,52,42,.12);
   --good-solid:#1E9E5A; --good-deep:#126B3B; --bad-solid:#DB3B2F; --bad-deep:#9A2219; --on-solid:#FFFFFF;
+  --ann-g:#15781B; --ann-r:#C42B2B; --ann-b:#1F4FD0; --ann-y:#E68F00;
   --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -104,6 +105,9 @@ button{font:inherit;color:inherit}
 .sq.hl::after{background:var(--hl)}
 .sq.sel::after{box-shadow:inset 0 0 0 3px var(--accent);background:var(--accent-soft)}
 .sq.bad::after{box-shadow:inset 0 0 0 3px var(--bad);background:var(--bad-soft)}
+.sq[data-an]::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:var(--an);opacity:.6}
+.sq[data-an="g"]{--an:var(--ann-g)}.sq[data-an="r"]{--an:var(--ann-r)}.sq[data-an="b"]{--an:var(--ann-b)}.sq[data-an="y"]{--an:var(--ann-y)}
+.arrows{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible}
 .board.solved{box-shadow:0 0 0 3px var(--good), 0 10px 30px -18px rgba(0,0,0,.45)}
 .board.editable .sq{cursor:pointer}
 .board.stamping .sq{cursor:copy}
@@ -262,7 +266,7 @@ button{font:inherit;color:inherit}
           <button class="btn small ghost" id="btn-flip" title="Flip the board">Flip</button>
         </div>
       </div>
-      <div class="board-shell"><div class="board" id="board" role="grid" aria-label="Chess board"></div></div>
+      <div class="board-shell"><div class="board" id="board" role="grid" aria-label="Chess board"></div><svg class="arrows" id="arrows" viewBox="0 0 8 8" aria-hidden="true"></svg></div>
     </div>
 
     <aside class="side">
@@ -304,7 +308,7 @@ const $=id=>document.getElementById(id);
 
 /* ---------- state ---------- */
 const S={count:0,expected:0,g:null,start:0,len:0,startBoard:null,target:null,board:null,history:[],attempts:0,hinted:false,
-  phase:'arrange',marks:null,sel:null,spare:null,replay:null,view:'answer',userFinal:null,diff:null,levelUp:false,firstTry:false,anim:null,started:false,peeked:false};
+  phase:'arrange',marks:null,sel:null,spare:null,replay:null,view:'answer',userFinal:null,diff:null,levelUp:false,firstTry:false,anim:null,started:false,peeked:false,arrows:[],hls:{}};
 
 function pick(level){
   const len=plies(level);
@@ -321,7 +325,7 @@ function newPuzzle(){
   cancelNext();
   const p=pick(P.level), g=GAMES[p.gi];
   Object.assign(S,{g,start:p.start,len:p.len,startBoard:parse(g.p[p.start]),target:parse(g.p[p.start+p.len]),
-    history:[],attempts:0,hinted:false,phase:'arrange',marks:null,sel:null,spare:null,replay:null,view:'answer',userFinal:null,diff:null,levelUp:false,firstTry:false,started:false,peeked:false});
+    history:[],attempts:0,hinted:false,phase:'arrange',marks:null,sel:null,spare:null,replay:null,view:'answer',userFinal:null,diff:null,levelUp:false,firstTry:false,started:false,peeked:false,arrows:[],hls:{}});
   S.board=S.startBoard.slice();S.count=0;S.expected=expectedActions();clearTimeout(autoTimer);
   save();render();
 }
@@ -499,6 +503,7 @@ function render(){
   trayEl.querySelectorAll('.spare').forEach(b=>b.setAttribute('aria-pressed',(b.dataset.p?S.spare===b.dataset.p:S.spare==='x')?'true':'false'));
   // stats
   $('st-solved').textContent=P.solved;$('st-first').textContent=P.solved?Math.round(100*P.first/P.solved)+'%':'–';$('st-best').textContent=P.best;
+  renderAnn();
   renderFeedback();
   playAnim();
 }
@@ -544,7 +549,8 @@ function renderFeedback(){
   if(S.phase==='arrange'){
     if(!S.attempts){
       h='<h3>Play it in your head</h3><p>Read the moves, picture each one, then set up the board as it stands after the last move. '+(P.autoCheck?'It checks itself once you have made '+S.expected+' move'+(S.expected===1?'':'s')+' on the board.':'Check when you are done.')+'</p>'+
-        '<p class="hint">Drag a piece to move it. Drop it on another piece to capture. Drag it off the board to remove it. You can also tap a piece, then tap a square.</p>';
+        '<p class="hint">Drag a piece to move it. Drop it on another piece to capture. Drag it off the board to remove it. You can also tap a piece, then tap a square.</p>'+
+        '<p class="hint">Right-click a square to highlight it, or right-drag to draw an arrow (hold Shift, Alt or both for other colors). Left-click the board to clear them.</p>';
     }else{
       el.classList.add('bad');
       const n=S.diff?S.diff.length:0;
@@ -587,7 +593,10 @@ function squareAt(x,y){
 }
 function overTrash(x,y){const t=$('trash');if(!t||$('tray-card').hidden)return false;const r=t.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
 boardEl.addEventListener('pointerdown',e=>{
-  if(S.phase!=='arrange'||e.button>0)return;
+  if(e.button===2){const i=squareAt(e.clientX,e.clientY);if(i==null)return;e.preventDefault();ann={from:i,to:i,c:annColor(e)};return;}
+  if(e.button>0)return;
+  if(S.arrows.length||Object.keys(S.hls).length)clearAnn();
+  if(S.phase!=='arrange')return;
   const i=squareAt(e.clientX,e.clientY);if(i==null)return;
   e.preventDefault();
   drag={src:'board',from:i,piece:S.board[i],x0:e.clientX,y0:e.clientY,started:false,ghost:null};
@@ -598,6 +607,7 @@ trayEl.addEventListener('pointerdown',e=>{
   drag={src:'tray',el:b,piece:b.dataset.p||null,x0:e.clientX,y0:e.clientY,started:false,ghost:null};
 });
 window.addEventListener('pointermove',e=>{
+  if(ann){const i=squareAt(e.clientX,e.clientY);if(i!==ann.to){ann.to=i;renderAnn();}return;}
   if(!drag)return;
   if(!drag.started){
     if(!drag.piece||Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<6)return;
@@ -625,12 +635,38 @@ function endDrag(e,cancel){
     else{const p=d.piece||'x';S.spare=S.spare===p?null:p;S.sel=null;render();}
   }
 }
-window.addEventListener('pointerup',e=>endDrag(e,false));
-window.addEventListener('pointercancel',e=>endDrag(e,true));
-boardEl.addEventListener('contextmenu',e=>{
-  if(S.phase!=='arrange')return;e.preventDefault();
-  const i=squareAt(e.clientX,e.clientY);if(i!=null)edit(b=>{b[i]=null;});
-});
+window.addEventListener('pointerup',e=>{if(ann)endAnn();else endDrag(e,false);});
+window.addEventListener('pointercancel',e=>{if(ann){ann=null;renderAnn();}else endDrag(e,true);});
+boardEl.addEventListener('contextmenu',e=>e.preventDefault());
+
+/* ---------- right-button annotations: highlight squares, draw arrows ---------- */
+/* Green by default; Shift = red, Alt = blue, Shift+Alt = yellow. Same shape again in the same color removes it. */
+let ann=null;
+function annColor(e){return e.shiftKey&&e.altKey?'y':e.shiftKey?'r':e.altKey?'b':'g';}
+function clearAnn(){S.arrows=[];S.hls={};renderAnn();}
+function endAnn(){
+  const a=ann;ann=null;
+  if(a.to==null){renderAnn();return;}
+  if(a.to===a.from){if(S.hls[a.from]===a.c)delete S.hls[a.from];else S.hls[a.from]=a.c;}
+  else{const k=S.arrows.findIndex(x=>x.f===a.from&&x.t===a.to);
+    if(k>=0&&S.arrows[k].c===a.c)S.arrows.splice(k,1);
+    else{if(k>=0)S.arrows.splice(k,1);S.arrows.push({f:a.from,t:a.to,c:a.c});}}
+  renderAnn();
+}
+const ANN_COLORS={g:'var(--ann-g)',r:'var(--ann-r)',b:'var(--ann-b)',y:'var(--ann-y)'};
+function arrowSvg(f,t,c,op){
+  const pt=i=>{const d=P.flipped?63-i:i;return [d%8+.5,Math.floor(d/8)+.5];};
+  const [x1,y1]=pt(f),[x2,y2]=pt(t),len=Math.hypot(x2-x1,y2-y1),ux=(x2-x1)/len,uy=(y2-y1)/len;
+  const H=.42,W=.3,bx=x2-ux*H,by=y2-uy*H,r=n=>n.toFixed(3);
+  return '<g opacity="'+op+'" style="fill:'+ANN_COLORS[c]+';stroke:'+ANN_COLORS[c]+'"><line x1="'+r(x1)+'" y1="'+r(y1)+'" x2="'+r(bx+ux*.02)+'" y2="'+r(by+uy*.02)+'" stroke-width=".17" stroke-linecap="round"/>'+
+    '<polygon style="stroke:none" points="'+r(x2)+','+r(y2)+' '+r(bx-uy*W)+','+r(by+ux*W)+' '+r(bx+uy*W)+','+r(by-ux*W)+'"/></g>';
+}
+function renderAnn(){
+  for(const el of sqEls){const c=S.hls[el.dataset.i];if(c)el.dataset.an=c;else delete el.dataset.an;}
+  let h=S.arrows.map(a=>arrowSvg(a.f,a.t,a.c,.8)).join('');
+  if(ann&&ann.to!=null&&ann.to!==ann.from)h+=arrowSvg(ann.from,ann.to,ann.c,.55);
+  $('arrows').innerHTML=h;
+}
 
 /* ---------- controls ---------- */
 $('opt-hide').onchange=e=>{P.hideMoves=e.target.checked;save();render();};
@@ -646,7 +682,7 @@ $('btn-flip').onclick=()=>{P.flipped=!P.flipped;save();render();};
 $('lvl-down').onclick=()=>setLevel(P.level-1);$('lvl-up').onclick=()=>setLevel(P.level+1);
 document.addEventListener('keydown',e=>{
   const tag=(e.target.tagName||'').toLowerCase();
-  if(e.key==='Escape'){if(!setPanel.hidden){toggleSettings(false);setBtn.focus();return;}S.sel=null;S.spare=null;render();return;}
+  if(e.key==='Escape'){if(!setPanel.hidden){toggleSettings(false);setBtn.focus();return;}S.sel=null;S.spare=null;S.arrows=[];S.hls={};render();return;}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return;}
   if(e.key==='Enter'&&tag!=='button'&&tag!=='input'&&setPanel.hidden){e.preventDefault();if(S.phase==='arrange')check();else newPuzzle();return;}
   if(S.replay!=null){if(e.key==='ArrowRight')stepReplay(S.replay+1);if(e.key==='ArrowLeft')stepReplay(S.replay-1);}
