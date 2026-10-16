@@ -8,10 +8,11 @@ Browser-based chess training drills. No server, no build step needed to run: ope
 Train your ability to visualize a chain of moves.
 
 1. You get a starting position and a line of moves.
-2. Play the line in your head, then rearrange the pieces into the final position in one go.
-3. Press **Check** (or let it check automatically once your move count matches the line).
+2. Memorize the line and play it in your head. The moves disappear once you start moving pieces.
+3. Rearrange the pieces into the final position in one go.
+4. Press **Check** (or let it check automatically once your move count matches the line).
 
-Lines get one half-move longer per level (level 1 = 2 half-moves, level 15 = 16). Solve 3 lines in a row on the first check to level up. Settings let you hide the move list once you start moving, auto-check, auto-advance to the next line, and turn auto level-up on or off. Progress is saved in the browser.
+Lines get one half-move longer per level (level 1 = 2 half-moves, level 15 = 16). Solve 3 lines in a row on the first check to level up. The board is shown from the side to move (Flip turns it for the current line). The move list is hidden as soon as you touch the board; Peek shows it again, but that line no longer counts as a first-check solve. Settings let you auto-check, auto-advance to the next line, and turn auto level-up on or off. Progress is saved in the browser.
 
 To think through a line, right-click a square to highlight it or right-drag to draw an arrow (green by default; hold Shift for red, Alt for blue, Shift+Alt for yellow). Repeat the same mark to remove it; left-click the board or press Esc to clear them all.
 
