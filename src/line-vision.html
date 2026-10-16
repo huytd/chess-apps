@@ -284,11 +284,12 @@ button{font:inherit;color:inherit}
       </div>
     </aside>
   </main>
-  <p class="foot">Lines come from classic games and mainline openings. Piece set: cburnett (GPLv2+).</p>
+  <p class="foot">Lines come from /*GAME_COUNT*/ classic master games and mainline openings. Game scores via PGN Mentor. Piece set: cburnett (GPLv2+).</p>
 </div>
 
+<script src="chess.js"></script>
+<script src="games.js"></script>
 <script>
-/*DATA*/
 (function(){
 "use strict";
 const TOOLS=[{id:'line',name:'Line Vision'}];
@@ -310,20 +311,37 @@ const $=id=>document.getElementById(id);
 const S={count:0,expected:0,g:null,start:0,len:0,startBoard:null,target:null,board:null,history:[],attempts:0,hinted:false,
   phase:'arrange',marks:null,sel:null,spare:null,replay:null,view:'answer',userFinal:null,diff:null,levelUp:false,firstTry:false,anim:null,started:false,peeked:false,arrows:[],hls:{}};
 
+/* GAMES (games.js) holds [name, moves]: 2 chars per move (from, to), plus !$%* after a promotion. */
+const SQ='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_', PROMO='!$%*';
+const LENS=GAMES.map(g=>g[1].replace(/[!$%*]/g,'').length/2);
+const sqName=k=>FILES[k%8]+(8-Math.floor(k/8));
+function expand(gi){
+  const [n,m]=GAMES[gi], c=new Chess(), s=[], f=[], p=[c.fen().split(' ')[0]];
+  for(let k=0;k<m.length;){
+    const from=sqName(SQ.indexOf(m[k])), to=sqName(SQ.indexOf(m[k+1]));k+=2;
+    let promotion;if(PROMO.includes(m[k]))promotion='qrbn'[PROMO.indexOf(m[k++])];
+    const mv=c.move({from,to,promotion});s.push(mv.san);f.push(mv.from+mv.to);p.push(c.fen().split(' ')[0]);
+  }
+  return {n,k:/ vs /.test(n)||/Légal/.test(n)?'game':'opening',s,f,p};
+}
+/* Every (game, start) slice of the right length is equally likely, so long games are not under-sampled.
+   Slices from the same game that overlap a recently seen one (at any level) are skipped. */
 function pick(level){
-  const len=plies(level);
-  const eligible=GAMES.map((g,i)=>i).filter(i=>GAMES[i].s.length>=len);
+  const len=plies(level), w=[];let total=0;
+  const range=gi=>{const n=LENS[gi];return n<len?null:[Math.max(0,Math.min(6,n-len)),n-len];};
+  for(let gi=0;gi<GAMES.length;gi++){const r=range(gi);total+=r?r[1]-r[0]+1:0;w.push(total);}
+  const recent=P.recent.map(k=>k.split(':').map(Number));
   for(let tries=0;tries<40;tries++){
-    const gi=eligible[Math.floor(Math.random()*eligible.length)], n=GAMES[gi].s.length;
-    const lo=Math.max(0,Math.min(6,n-len)), hi=n-len;
-    const st=lo+Math.floor(Math.random()*(hi-lo+1));
-    const key=gi+':'+st+':'+len;
-    if(!P.recent.includes(key)||tries===39){P.recent=[key,...P.recent].slice(0,40);return {gi,start:st,len};}
+    const x=Math.floor(Math.random()*total);let a=0,b=w.length-1;
+    while(a<b){const mid=(a+b)>>1;if(w[mid]>x)b=mid;else a=mid+1;}
+    const gi=a, st=range(gi)[0]+x-(gi?w[gi-1]:0);
+    const seen=recent.some(([g,s0,l0])=>g===gi&&st<s0+l0&&s0<st+len);
+    if(!seen||tries===39){P.recent=[gi+':'+st+':'+len,...P.recent].slice(0,60);return {gi,start:st,len};}
   }
 }
 function newPuzzle(){
   cancelNext();
-  const p=pick(P.level), g=GAMES[p.gi];
+  const p=pick(P.level), g=expand(p.gi);
   Object.assign(S,{g,start:p.start,len:p.len,startBoard:parse(g.p[p.start]),target:parse(g.p[p.start+p.len]),
     history:[],attempts:0,hinted:false,phase:'arrange',marks:null,sel:null,spare:null,replay:null,view:'answer',userFinal:null,diff:null,levelUp:false,firstTry:false,started:false,peeked:false,arrows:[],hls:{}});
   S.board=S.startBoard.slice();S.count=0;S.expected=expectedActions();clearTimeout(autoTimer);

@@ -19,12 +19,14 @@ To think through a line, right-click a square to highlight it or right-drag to d
 
 ```sh
 npm install
-npm run build   # writes docs/index.html
+npm run build   # writes docs/index.html, docs/games.js, docs/chess.js
 ```
 
-- `src/line-vision.html` — page source (CSS + JS). `/*PIECES*/` and `/*DATA*/` are filled in by the build.
-- `src/games.txt` — one line per source: `Name|1.e4 e5 2.Nf3 ...`. Every move is validated with chess.js at build time, and positions are precomputed per ply.
-- `scripts/build.js` — validates games, inlines piece images, writes `docs/index.html`.
+- `src/line-vision.html` — page source (CSS + JS). `/*PIECES*/` and `/*GAME_COUNT*/` are filled in by the build.
+- `src/games.txt` — one line per source: `Name|1.e4 e5 2.Nf3 ...` (about 5,000 games). Names containing ` vs ` are shown as games, the rest as opening lines.
+- `scripts/build.js` — validates every move with chess.js and packs each game into `docs/games.js` at 2 characters per move; the page replays only the game it shows. Validated lines are cached in `node_modules/.cache`, so the first build takes under a minute and later ones are instant. Also inlines piece images and copies chess.js to `docs/chess.js`.
+
+Lines are picked uniformly over every slice of every game, skipping slices that overlap recently seen ones from the same game.
 
 ## Deploy
 
@@ -33,3 +35,7 @@ GitHub Pages serves `docs/` from the `main` branch (Settings → Pages → Deplo
 ## Credits
 
 Piece set: cburnett, via [chessground](https://github.com/lichess-org/chessground) (GPLv2+).
+
+Game scores: [PGN Mentor](https://www.pgnmentor.com/files.html) player collections (Morphy through Carlsen; classical games before 2016, 30–100 half-moves).
+
+Move logic: [chess.js](https://github.com/jhlywa/chess.js) (BSD-2-Clause).

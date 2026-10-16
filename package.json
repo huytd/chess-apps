@@ -6,7 +6,7 @@
     "build": "node scripts/build.js"
   },
   "devDependencies": {
-    "chess.js": "0.10.3",
+    "chess.js": "1.4.0",
     "chessground": "9.1.1"
   }
 }
