@@ -17,10 +17,15 @@
 .turn-dot.w{background:#FFFFFF}
 .turn-dot.b{background:#111111}
 .turn b{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;letter-spacing:-.015em}
-.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:3px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line)}
-.seg button{border:0;background:transparent;padding:6px 6px;border-radius:999px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;color:var(--muted);cursor:pointer}
-.seg button:hover{color:var(--ink)}
-.seg button[aria-pressed="true"]{background:var(--primary);color:var(--primary-ink)}
+.stepper{display:flex;gap:6px}
+.stepper button{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;text-align:left;transition:background .12s, border-color .12s, color .12s}
+.stepper button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stepper i{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:700;border:1.5px solid currentColor;line-height:1}
+.stepper button:not(:disabled):not([aria-current]):hover{color:var(--ink);border-color:var(--line-strong)}
+.stepper button[aria-current="step"]{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+.stepper button.done i{background:var(--good-solid);border-color:var(--good-solid);color:#FFFFFF}
+.stepper button.done.slip i{background:var(--arrow-missed);border-color:var(--arrow-missed)}
+.stepper button:disabled{opacity:.45;cursor:default}
 .task{margin:12px 0 0;font-size:15px}
 .task-meta{display:flex;justify-content:space-between;align-items:center;gap:6px 12px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)}
 .task-meta b{color:var(--ink);font-weight:600}
@@ -40,7 +45,7 @@
 .ring.new{animation:ringin .16s ease-out}
 .atk-group{margin:10px 0 2px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .atk-group:first-child{margin-top:0}
-@media (max-width:400px){.seg button{font-size:12px}}
+@media (max-width:400px){.stepper button{font-size:12px;padding:7px 8px;gap:5px}}
 
 .review-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
 .review-head span{font-size:12px;color:var(--muted)}
@@ -76,18 +81,18 @@
 <div class="app">
   <header class="top">
     <div class="brand"><div class="brand-mark" aria-hidden="true"></div><h1>Chess Vision Lab</h1></div>
-    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">My attacks and Their threats</div><label class="opt" for="opt-checks"><input type="checkbox" id="opt-checks"><span class="txt"><b>Include checks</b><span>Every check counts, not just captures. Changing this restarts the position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">While solving</div><label class="opt" for="opt-total"><input type="checkbox" id="opt-total"><span class="txt"><b>Show how many there are</b><span>The counter shows the total to find. Off is harder: you decide when you have them all.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
+    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">Steps</div><label class="opt" for="opt-only"><input type="checkbox" id="opt-only"><span class="txt"><b>Hanging pieces only</b><span>Skip the threats and attacks steps for quicker rounds. Changing this starts a new position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">Threats and attacks steps</div><label class="opt" for="opt-checks"><input type="checkbox" id="opt-checks"><span class="txt"><b>Include checks</b><span>Every check counts, not just captures. Changing this starts a new position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">While solving</div><label class="opt" for="opt-total"><input type="checkbox" id="opt-total"><span class="txt"><b>Show how many there are</b><span>The counter shows the total to find. Off is harder: you decide when you have them all.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
   </header>
 
   <main class="bench">
     <section class="card line-card" aria-labelledby="turn-label">
       <div class="task-head">
         <div class="turn"><i class="turn-dot" id="turn-dot" aria-hidden="true"></i><b id="turn-label">White to move</b></div>
-        <div class="seg" role="group" aria-label="What to find">
-          <button id="mode-hanging" aria-pressed="true" title="Pieces on either side that can be won">Hanging pieces</button>
-          <button id="mode-mine" aria-pressed="false" title="Every capture and check the side to move can play now">My attacks</button>
-          <button id="mode-theirs" aria-pressed="false" title="Every capture and check the opponent would have if it were their move">Their threats</button>
-        </div>
+        <nav class="stepper" id="stepper" aria-label="Steps for this position">
+          <button data-m="hanging" title="Step 1: hanging pieces on either side"><i>1</i><span>Hanging</span></button>
+          <button data-m="theirs" title="Step 2: every capture and check the opponent would have"><i>2</i><span>Threats</span></button>
+          <button data-m="mine" title="Step 3: every capture and check you can play"><i>3</i><span>Attacks</span></button>
+        </nav>
       </div>
       <p class="task" id="task"></p>
       <div class="task-meta"><span id="meta"></span><span class="engine-chip" id="engine-chip" aria-live="polite"><i></i><span>Stockfish loading</span></span></div>
@@ -131,18 +136,21 @@
 <script>
 (function(){
 "use strict";
-const FILES='abcdefgh', DEPTH=14, MIN_PLY=12, MAX_PLY=100, MIN_ATTACKS=2, MAX_ATTACKS=12, MAX_HANGING=4, SAFE_SHARE=.2;
+const FILES='abcdefgh', DEPTH=14, MIN_PLY=12, MAX_PLY=100, MAX_ATTACKS=12, MAX_HANGING=4, SAFE_SHARE=.2;
+/* Each position is a round of steps on the same board: what hangs, what the opponent threatens, what you can do. */
+const STEPS={hanging:'Hanging pieces',theirs:'Their threats',mine:'My attacks'};
 
 /* ---------- persistence ---------- */
 const KEY='cvl-danger-v1';
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')return s;}catch(e){}return null;}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}}
 const blank=()=>({done:0,perfect:0,streak:0,best:0});
-const P=Object.assign({mode:'hanging',checks:true,showTotal:false,recent:[]},load()||{});
-/* Saves from before the hanging-pieces drill kept one set of stats (for the attack drills) and default to it. */
-if(!P.stats){P.stats={hanging:blank(),attacks:{done:P.done||0,perfect:P.perfect||0,streak:P.streak||0,best:P.best||0}};P.mode='hanging';
-  delete P.done;delete P.perfect;delete P.streak;delete P.best;}
-const drillOf=mode=>mode==='hanging'?'hanging':'attacks';
+const P=Object.assign({checks:true,showTotal:false,only:false,recent:[]},load()||{});
+/* Stats count rounds. Older saves kept them per drill (or, before that, flat); rounds start from the hanging-pieces ones. */
+if(!P.stats)P.stats={};
+if(!P.stats.rounds)P.stats.rounds=P.stats.hanging||blank();
+delete P.mode;delete P.done;delete P.perfect;delete P.streak;delete P.best;delete P.stats.hanging;delete P.stats.attacks;
+const steps=()=>P.only?['hanging']:['hanging','theirs','mine'];
 
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
@@ -219,23 +227,24 @@ function hangingIn(fen){
 }
 function answersFor(fen,mode){return mode==='hanging'?hangingIn(fen):attacksIn(attackFen(fen,mode),P.checks);}
 /* Positions are drawn uniformly over every eligible ply of every game, skipping games seen recently, with the side to
-   move not in check. Attack drills want a handful of attacks. Hanging pieces wants 1–4 targets, or, about one time in
-   five, none at all; it also skips positions right after a capture, where the answer is usually just to take back. */
+   move not in check, and not right after a capture (where the answer is usually just to take back). Hanging pieces
+   wants 1–4 targets, or, about one time in five, none at all; the attack steps want no more than a dozen arrows each. */
 function pick(){
   const w=[];let total=0;
   for(let gi=0;gi<GAMES.length;gi++){total+=Math.max(0,Math.min(LENS[gi],MAX_PLY)-MIN_PLY+1);w.push(total);}
-  const recent=new Set(P.recent), hanging=P.mode==='hanging', wantSafe=hanging&&Math.random()<SAFE_SHARE;let fallback=null;
+  const recent=new Set(P.recent), wantSafe=Math.random()<SAFE_SHARE;let fallback=null;
   for(let tries=0;tries<300;tries++){
     const x=Math.floor(Math.random()*total);let a=0,b=w.length-1;
     while(a<b){const mid=(a+b)>>1;if(w[mid]>x)b=mid;else a=mid+1;}
     const gi=a, ply=MIN_PLY+x-(a?w[a-1]:0);
     if(recent.has(gi)&&tries<250)continue;
     const r=replay(gi,ply);
-    if(r.check||r.over||(hanging&&r.last.capture))continue;
-    const cand=Object.assign({gi,ply},r), n=answersFor(r.fen,P.mode).length;
-    const good=hanging?(wantSafe?n===0:n>=1&&n<=MAX_HANGING):n>=MIN_ATTACKS&&n<=MAX_ATTACKS;
-    if(good){fallback=cand;break;}
-    if(!fallback&&(hanging||n))fallback=cand;
+    if(r.check||r.over||r.last.capture)continue;
+    const answers={};for(const m of steps())answers[m]=answersFor(r.fen,m);
+    const cand=Object.assign({gi,ply,answers},r), n=answers.hanging.length;
+    const fits=steps().every(m=>m==='hanging'||answers[m].length<=MAX_ATTACKS);
+    if(fits&&(wantSafe?n===0:n>=1&&n<=MAX_HANGING)){fallback=cand;break;}
+    if(!fallback)fallback=cand;
   }
   if(!fallback)return pick();
   P.recent=[fallback.gi,...P.recent].slice(0,60);
@@ -283,39 +292,44 @@ const Engine=(function(){
 })();
 
 /* ---------- state ---------- */
-/* Hanging pieces: answers are squares and the player marks pieces. Attack drills: answers are from-to arrows. */
-const S={gi:0,ply:0,fen:'',last:null,board:null,turn:'w',flipped:false,evals:{},
-  mode:'hanging',afen:'',attacker:'w',answers:[],arrows:[],marks:[],history:[],graded:null,attempts:0,phase:'find',result:null,focus:null,sel:null,preview:null,anim:null,fresh:null};
+/* The S fields below "mode" belong to the current step; each step's are kept in S.saved while another step is shown.
+   Hanging pieces: answers are squares and the player marks pieces. Attack steps: answers are from-to arrows. */
+const S={gi:0,ply:0,fen:'',last:null,board:null,turn:'w',flipped:false,evals:{},answersBy:{},saved:{},results:{},roundDone:false,
+  mode:null,afen:'',attacker:'w',answers:[],arrows:[],marks:[],history:[],graded:null,attempts:0,phase:'find',result:null,focus:null,perfect:false,firstTry:false,
+  sel:null,preview:null,anim:null,fresh:null,closing:false};
+const STEP_FIELDS=['arrows','marks','history','graded','attempts','phase','result','focus','perfect','firstTry'];
 const hangMode=()=>S.mode==='hanging';
-const stats=()=>P.stats[drillOf(S.mode)];
+const stats=()=>P.stats.rounds;
 
 function newPosition(){
-  S.mode=P.mode;
   const p=pick();
-  Object.assign(S,{gi:p.gi,ply:p.ply,fen:p.fen,last:p.last,board:parse(p.fen),turn:p.fen.split(' ')[1],evals:{}});
+  Object.assign(S,{gi:p.gi,ply:p.ply,fen:p.fen,last:p.last,board:parse(p.fen),turn:p.fen.split(' ')[1],evals:{},answersBy:p.answers,saved:{},results:{},roundDone:false,mode:null});
   S.flipped=S.turn==='b';
-  setMode(P.mode);
-}
-function setMode(mode){
-  P.mode=mode;
-  // the drills pick positions differently, so switching between them starts a new one
-  if(drillOf(mode)!==drillOf(S.mode)){newPosition();return;}
-  const afen=attackFen(S.fen,mode);
-  Object.assign(S,{mode,afen,attacker:afen.split(' ')[1],answers:answersFor(S.fen,mode),arrows:[],marks:[],history:[],graded:null,attempts:0,phase:'find',result:null,focus:null,sel:null,preview:null,fresh:null});
-  analyse();save();render();
-}
-
-/* For each side with something to capture, two searches: the engine's free choice, then each capture via searchmoves.
-   The side to move always gets the first search, for "Stockfish's choice". */
-const evalKey=()=>S.mode+(P.checks?'+':'-');
-const currentEval=()=>S.evals[evalKey()]||null;
-function analyse(){
-  const key=evalKey();
+  // analyse every step up front, so later steps are ready by the time they are reached
   Engine.cancel();
-  for(const k in S.evals)if(!S.evals[k].done)delete S.evals[k];
+  for(const m of steps())analyse(m);
+  save();enterStep('hanging');
+}
+function enterStep(mode){
+  if(S.mode){const o={};for(const f of STEP_FIELDS)o[f]=S[f];S.saved[S.mode]=o;}
+  const afen=attackFen(S.fen,mode);
+  Object.assign(S,{mode,afen,attacker:afen.split(' ')[1],answers:S.answersBy[mode],sel:null,preview:null,fresh:null,closing:false},
+    S.saved[mode]||{arrows:[],marks:[],history:[],graded:null,attempts:0,phase:'find',result:null,focus:null,perfect:false,firstTry:false});
+  render();
+}
+const nextStep=()=>steps()[steps().indexOf(S.mode)+1]||null;
+const reachable=m=>{const o=steps(), k=o.indexOf(m);return k===0||(k>0&&!!S.results[o[k-1]]);};
+function goOn(){const n=nextStep();if(n)enterStep(n);else newPosition();}
+
+/* Per step, and for each side with something to capture: the engine's free choice, then each capture via searchmoves.
+   The side to move in the step's position always gets the first search, for "Stockfish's choice". */
+const evalKey=m=>m==='hanging'?m:m+(P.checks?'+':'-');
+const currentEval=()=>S.evals[evalKey(S.mode)]||null;
+function analyse(mode){
+  const key=evalKey(mode), afen=attackFen(S.fen,mode), answers=S.answersBy[mode];
   if(S.evals[key]||Engine.state==='error')return;
-  const by={[S.afen]:[]};
-  for(const a of S.answers)(by[a.afen]=by[a.afen]||[]).push(a.uci);
+  const by={[afen]:[]};
+  for(const a of answers)(by[a.afen]=by[a.afen]||[]).push(a.uci);
   const ev=S.evals[key]={groups:{},done:false};let left=Object.keys(by).length;
   const finish=()=>{if(--left)return;ev.done=true;if(currentEval()===ev)render();};
   for(const fen in by){
@@ -368,13 +382,18 @@ function check(){
   if(S.phase!=='find')return;
   S.sel=null;S.attempts++;grade();
   if(!S.result.wrong&&!S.result.missed)finish(true);
-  else{stats().streak=0;S.anim='wrong';save();render();}
+  else{S.anim='wrong';render();}
 }
 function reveal(){if(S.phase!=='find')return;S.sel=null;grade();finish(false);}
+/* A round counts once every step is answered; it is perfect when each step was right on the first check. */
 function finish(perfect){
-  const st=stats();
-  S.phase='done';S.perfect=perfect;S.firstTry=perfect&&S.attempts===1;st.done++;
-  if(S.firstTry){st.perfect++;st.streak++;st.best=Math.max(st.best,st.streak);}else st.streak=0;
+  S.phase='done';S.perfect=perfect;S.firstTry=perfect&&S.attempts===1;
+  S.results[S.mode]={firstTry:S.firstTry};
+  if(!S.roundDone&&steps().every(m=>S.results[m])){
+    const st=stats(), clean=steps().every(m=>S.results[m].firstTry);
+    S.roundDone=true;S.closing=true;st.done++;
+    if(clean){st.perfect++;st.streak++;st.best=Math.max(st.best,st.streak);}else st.streak=0;
+  }
   S.anim=perfect?'correct':'reveal';save();render();
 }
 
@@ -436,7 +455,12 @@ function render(){
   const hang=hangMode(), mine=S.mode==='mine', a=side(S.attacker), finding=S.phase==='find', you=side(S.turn), them=side(S.turn==='w'?'b':'w');
   // task card
   $('turn-dot').className='turn-dot '+S.turn;$('turn-label').textContent=you+' to move';
-  for(const m of ['hanging','mine','theirs'])$('mode-'+m).setAttribute('aria-pressed',S.mode===m);
+  for(const b of $('stepper').children){
+    const m=b.dataset.m, r=S.results[m];
+    b.hidden=!steps().includes(m);b.disabled=!reachable(m);
+    if(m===S.mode)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');
+    b.className=r?'done'+(r.firstTry?'':' slip'):'';b.firstElementChild.textContent=r?'✓':steps().indexOf(m)+1;
+  }
   const what=P.checks?'capture and check':'capture';
   $('task').innerHTML=hang?'Tap every <b>hanging piece</b>: '+them+'’s pieces you can win now, and yours '+them+' could win if it were their move.'
     :mine?'Find every <b>'+what+'</b> '+a+' can play right now.':'Find every <b>'+what+'</b> '+a+' would have if it were their move.';
@@ -519,9 +543,9 @@ function renderFeedback(){
   const unit=k=>hang?plural(k,'hanging piece'):plural(k,'attack');
   if(S.phase==='find'){
     if(!S.attempts){
-      h=hang?'<h3>Spot the danger</h3><p>A piece <b>hangs</b> when taking it wins material: nothing defends it, or something cheaper attacks it. Tap every hanging piece, yours or theirs, then check.</p>'+
+      h=hang?'<h3>'+STEPS.hanging+'</h3><p>A piece <b>hangs</b> when taking it wins material: nothing defends it, or something cheaper attacks it. Tap every hanging piece, yours or theirs, then check.</p>'+
           '<p class="hint">Tap a piece again to unmark it. Only legal captures count, so a piece pinned to its king can’t take or take back. Sometimes nothing hangs: then check with nothing marked.</p>'
-        :'<h3>Spot the danger</h3><p>Draw an arrow from each '+a+' piece to every square where it can capture'+(P.checks?' or give check':'')+'. When you think you have them all, check.</p>'+
+        :'<h3>'+STEPS[S.mode]+'</h3><p>Draw an arrow from each '+a+' piece to every square where it '+(S.mode==='theirs'?'could capture'+(P.checks?' or give check':'')+' if it were '+a+'’s move':'can capture'+(P.checks?' or give check':''))+'. When you think you have them all, check.</p>'+
           '<p class="hint">Drag from a piece to its target, or tap the piece and then the target. Draw the same arrow again to remove it. Only legal moves count: a pinned piece can’t capture, and a king can’t take a defended piece.</p>'+
           (n?'':'<p class="hint">If you think there are none, check with no arrows.</p>');
     }else{
@@ -535,21 +559,27 @@ function renderFeedback(){
   }else{
     if(S.perfect){
       el.classList.add('good');
-      h='<h3>'+(n?(n===1?'Found it':'All '+n+' found'):'Right, nothing hangs')+(S.firstTry?'':' after '+plural(S.attempts,'check'))+'</h3>'+
-        '<p>'+(S.firstTry?(st.streak>1?st.streak+' perfect positions in a row.':'Perfect on the first check.'):'The streak counts first-check answers only.')+
+      h='<h3>'+(n?(n===1?'Found it':'All '+n+' found'):hang?'Right, nothing hangs':'Right, there are none')+(S.firstTry?'':' after '+plural(S.attempts,'check'))+'</h3>'+
+        '<p>'+(S.firstTry?'Right on the first check.':'Only first-check answers count toward a perfect position.')+
         (n?' See below what Stockfish makes of '+(hang?'each capture':'them')+'.':'')+'</p>';
     }else{
       h='<h3>'+(n?'There '+(n===1?'was ':'were ')+unit(n):hang?'Nothing was hanging':'There were none')+'</h3><p>'+(n?'You found '+r.found+' of '+n+'. ':'')+
         (r.wrong?plural(r.wrong,hang?'piece':'arrow')+' in red '+(r.wrong===1?'wasn’t':'weren’t')+(hang?' hanging. ':' an attack. '):'')+(r.missed?'Missed ones are dashed.':'')+'</p>';
     }
-    const other=hang?'':S.mode==='mine'?'<button class="btn small" data-a="theirs">Now find their threats</button>':'<button class="btn small" data-a="mine">Now find my attacks</button>';
-    h+='<div class="row split">'+other+'<button class="btn primary" data-a="next">Next position<span class="kbd">Enter</span></button></div>';
+    const nx=nextStep();
+    if(nx)h+='<div class="row split"><button class="btn small ghost" data-a="next" title="Leave this position and start a new one">New position</button>'+
+      '<button class="btn primary" data-a="step" data-m="'+nx+'">Next: '+STEPS[nx]+'<span class="kbd">Enter</span></button></div>';
+    else{
+      if(S.roundDone&&steps().length>1){const k=steps().filter(m=>S.results[m].firstTry).length;
+        h+='<p class="hint">This position: '+k+' of '+steps().length+' steps right on the first check.'+(k===steps().length&&st.streak>1?' '+st.streak+' perfect positions in a row.':'')+'</p>';}
+      h+='<div class="row split"><span></span><button class="btn primary" data-a="next">Next position<span class="kbd">Enter</span></button></div>';
+    }
   }
   el.innerHTML=h;
 }
 fbEl.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;
-  ({check,reveal,next:newPosition,mine:()=>setMode('mine'),theirs:()=>setMode('theirs')})[b.dataset.a]();
+  ({check,reveal,next:newPosition,step:()=>enterStep(b.dataset.m)})[b.dataset.a]();
 });
 
 function rowHtml(key,st,san,kind,l,v,mover){
@@ -637,7 +667,10 @@ function playAnim(){
   const shell=boardEl.parentElement;
   if(a==='correct'){
     restart(shell,'flash-good');
-    if(S.firstTry){const k=stats().streak;if(k>=3&&k%3===0)confetti();stamp(S.answers.length?any(['Danger spotted!','Eagle eye!','Nothing hidden!','All seen!']):any(['All safe!','Nothing hangs!']),k>1?k+' in a row':null);}
+    // the streak shows when a perfect round closes
+    const k=stats().streak, closed=S.closing&&steps().every(m=>S.results[m].firstTry);S.closing=false;
+    if(closed&&k>=3&&k%3===0)confetti();
+    if(S.firstTry)stamp(S.answers.length?any(['Danger spotted!','Eagle eye!','Nothing hidden!','All seen!']):any(['All safe!','Nothing hangs!','None at all!']),closed&&k>1?k+' perfect in a row':null);
     else stamp(any(['Got them all!','There they are!']));
   }else if(a==='wrong'){
     restart(shell,'flash-bad');restart(boardEl,'shake');restart(fbEl,'shake');
@@ -681,11 +714,16 @@ window.addEventListener('pointercancel',()=>{if(!drag)return;drag=null;S.preview
 boardEl.addEventListener('contextmenu',e=>e.preventDefault());
 
 /* ---------- controls ---------- */
-for(const m of ['hanging','mine','theirs'])$('mode-'+m).onclick=()=>{if(S.mode!==m)setMode(m);};
+$('stepper').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b||b.disabled)return;
+  if(e.detail)b.blur(); // after a mouse or touch click, Enter should go on rather than press the tab again
+  if(b.dataset.m!==S.mode)enterStep(b.dataset.m);
+});
 $('btn-undo').onclick=undo;$('btn-clear').onclick=clearPicks;
 $('btn-flip').onclick=()=>{S.flipped=!S.flipped;render();};
-$('opt-checks').checked=!!P.checks;$('opt-total').checked=!!P.showTotal;
-$('opt-checks').onchange=e=>{P.checks=e.target.checked;if(hangMode())save();else setMode(S.mode);};
+$('opt-checks').checked=!!P.checks;$('opt-total').checked=!!P.showTotal;$('opt-only').checked=!!P.only;
+$('opt-checks').onchange=e=>{P.checks=e.target.checked;newPosition();};
+$('opt-only').onchange=e=>{P.only=e.target.checked;newPosition();};
 $('opt-total').onchange=e=>{P.showTotal=e.target.checked;save();render();};
 const setBtn=$('btn-settings'),setPanel=$('settings-panel');
 function toggleSettings(open){setPanel.hidden=!open;setBtn.setAttribute('aria-expanded',open?'true':'false');}
@@ -695,7 +733,7 @@ document.addEventListener('keydown',e=>{
   const tag=(e.target.tagName||'').toLowerCase();
   if(e.key==='Escape'){if(!setPanel.hidden){toggleSettings(false);setBtn.focus();return;}S.sel=null;S.focus=null;render();return;}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return;}
-  if(e.key==='Enter'&&tag!=='button'&&tag!=='input'&&tag!=='a'&&setPanel.hidden){e.preventDefault();if(S.phase==='find')check();else newPosition();}
+  if(e.key==='Enter'&&tag!=='button'&&tag!=='input'&&tag!=='a'&&setPanel.hidden){e.preventDefault();if(S.phase==='find')check();else goOn();}
 });
 
 newPosition();

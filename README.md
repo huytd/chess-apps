@@ -17,14 +17,21 @@ Lines get one half-move longer per level (level 1 = 2 half-moves, level 15 = 16)
 To think through a line, right-click a square to highlight it or right-drag to draw an arrow (green by default; hold Shift for red, Alt for blue, Shift+Alt for yellow). Repeat the same mark to remove it; left-click the board or press Esc to clear them all.
 
 ### Spot the Danger
-Train your eye for loose pieces.
+Train your eye for danger, one position at a time, in three steps.
 
-1. You get a random position from a master game: move 6 onwards, side to move not in check, and not right after a capture (where the answer is usually just to take back). The last move is highlighted.
-2. Tap every **hanging piece**: the opponent's pieces you can win now, and your own pieces the opponent could win if it were their move. A piece hangs when taking it wins material, judged by the exchange on its square: both sides take turns capturing there with their cheapest piece and may stop at any point. Only legal captures count, so pins and x-ray attackers are taken into account. About one position in five has nothing hanging, and the right answer is to check with nothing marked.
-3. Press **Check**. Marks on pieces that don't hang turn red, and you can keep looking or press **Show all**.
-4. Found pieces get a green ring and missed ones a dashed orange ring, with an arrow from the piece that wins each one. Stockfish (running in the page) judges every capture against the current evaluation. Your captures **work**, are **dubious** or are a **trap**. The opponent's threats are **real**, **minor** or **harmless**. Tap a row to see Stockfish's line.
+You get a random position from a master game: move 6 onwards, side to move not in check, and not right after a capture (where the answer is usually just to take back). The last move is highlighted. Work through it step by step; each step unlocks the next on the same board:
 
-**My attacks** and **Their threats** are the broader drill: draw an arrow for every legal capture and check (or captures only) the side to move has, or the opponent would have if it were their move. Stockfish rates each one against its best move. Settings let you leave out checks and show how many there are to find. Perfect answers on the first check build a streak, kept separately for the two drills. Progress is saved in the browser.
+1. **Hanging pieces.** Tap every piece that hangs: the opponent's pieces you can win now, and your own pieces the opponent could win if it were their move. A piece hangs when taking it wins material, judged by the exchange on its square: both sides take turns capturing there with their cheapest piece and may stop at any point. Only legal captures count, so pins and x-ray attackers are taken into account. About one position in five has nothing hanging, and the right answer is to check with nothing marked.
+2. **Their threats.** Draw an arrow for every capture and check the opponent would have if it were their move.
+3. **My attacks.** Draw an arrow for every capture and check you can play now.
+
+Draw an arrow by dragging from a piece to its target, or tap the piece and then the target. After **Check**, wrong marks turn red and you can keep looking or press **Show all**. Found answers are green and missed ones dashed orange. Stockfish (running in the page) reviews every step:
+- **Hanging pieces:** your captures **work**, are **dubious** or are a **trap**, and the opponent's threats are **real**, **minor** or **harmless**, judged against the current evaluation.
+- **Threats and attacks:** each move is rated against Stockfish's best move.
+
+Tap a row to see Stockfish's line. Finished steps stay open in the stepper for review.
+
+A position counts as perfect when every step is right on the first check, and perfect positions in a row build a streak. Settings let you play hanging pieces only, leave checks out of the threats and attacks steps, and show how many there are to find. Progress is saved in the browser.
 
 ## Development
 
