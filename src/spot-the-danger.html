@@ -2,25 +2,25 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,700&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 /*PIECES*/
 /*COMMON*/
 /* Spot the Danger: task card, mode switch, engine status, attack review */
-:root{--warn:#A35F00;--arrow-mine:var(--accent);--arrow-found:var(--good-solid);--arrow-wrong:var(--bad-solid);--arrow-missed:#E68F00}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--warn:#F2B04C;--arrow-missed:#F2A93B}}
-:root[data-theme="dark"]{--warn:#F2B04C;--arrow-missed:#F2A93B}
+:root{--warn:#A35F00;--info:#2C5FC2;--arrow-mine:#2F6BD8;--arrow-found:var(--good-solid);--arrow-wrong:var(--bad-solid);--arrow-missed:#F76707}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--warn:#F2B04C;--info:#8FB0FF;--arrow-mine:#5C8EF2;--arrow-missed:#FF8A2B}}
+:root[data-theme="dark"]{--warn:#F2B04C;--info:#8FB0FF;--arrow-mine:#5C8EF2;--arrow-missed:#FF8A2B}
 
 .task-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .turn{display:flex;align-items:center;gap:10px}
-.turn-dot{width:24px;height:24px;border-radius:50%;flex:none;border:2px solid var(--ink)}
+.turn-dot{width:22px;height:22px;border-radius:50%;flex:none;border:1.5px solid var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .turn-dot.w{background:#FFFFFF}
 .turn-dot.b{background:#111111}
-.turn b{font-family:var(--f-display);font-weight:800;font-size:22px;line-height:1.1;letter-spacing:-.01em}
-.seg{display:inline-flex;gap:3px;padding:3px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line)}
-.seg button{border:0;background:transparent;padding:5px 10px;border-radius:6px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+.turn b{font-family:var(--f-display);font-weight:600;font-size:27px;line-height:1.1;letter-spacing:-.02em;font-variation-settings:"opsz" 96}
+.seg{display:inline-flex;gap:3px;padding:3px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line)}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:999px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
 .seg button:hover{color:var(--ink)}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line), 0 1px 2px rgba(0,0,0,.12)}
+.seg button[aria-pressed="true"]{background:var(--primary);color:var(--primary-ink)}
 .task{margin:12px 0 0;font-size:15px}
 .task-meta{display:flex;justify-content:space-between;align-items:center;gap:6px 12px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--muted)}
 .task-meta b{color:var(--ink);font-weight:600}
@@ -42,7 +42,7 @@
 .atk[aria-pressed="true"]{box-shadow:inset 0 0 0 1px var(--line)}
 .st{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;line-height:1;color:var(--on-solid)}
 .st.found{background:var(--arrow-found)}
-.st.missed{background:var(--arrow-missed);color:#1A1200}
+.st.missed{background:var(--arrow-missed);color:#FFFFFF}
 .st.wrong{background:var(--arrow-wrong)}
 .atk .what{display:flex;align-items:baseline;gap:8px;min-width:0}
 .atk .san{font-family:var(--f-mono);font-weight:600;font-size:15px}
@@ -50,11 +50,11 @@
 .atk .ev{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;min-width:5ch}
 .tag{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid currentColor;text-align:center;min-width:64px}
 .tag.best{color:var(--good)}
-.tag.good{color:var(--accent)}
+.tag.good{color:var(--info)}
 .tag.dubious{color:var(--warn)}
 .tag.bad{color:var(--bad)}
 .tag.none{color:var(--muted);border-color:transparent}
-.pv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px dashed var(--line);font-size:13px;color:var(--muted);min-height:2.6em}
+.pv{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);font-size:13px;color:var(--muted);min-height:2.6em}
 .pv b{color:var(--ink);font-weight:600}
 .pv .line{font-family:var(--f-mono);color:var(--ink)}
 .legend{display:flex;gap:4px 14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
@@ -66,7 +66,7 @@
 <div class="app">
   <header class="top">
     <div class="brand"><div class="brand-mark" aria-hidden="true"></div><h1>Chess Vision Lab</h1></div>
-    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">What counts as an attack</div><label class="opt" for="opt-checks"><input type="checkbox" id="opt-checks"><span class="txt"><b>Include checks</b><span>Every check counts, not just captures. Changing this restarts the position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">While solving</div><label class="opt" for="opt-total"><input type="checkbox" id="opt-total"><span class="txt"><b>Show how many there are</b><span>The arrow counter shows the total to find. Off is harder: you decide when you have them all.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
+    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">What counts as an attack</div><label class="opt" for="opt-checks"><input type="checkbox" id="opt-checks"><span class="txt"><b>Include checks</b><span>Every check counts, not just captures. Changing this restarts the position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">While solving</div><label class="opt" for="opt-total"><input type="checkbox" id="opt-total"><span class="txt"><b>Show how many there are</b><span>The arrow counter shows the total to find. Off is harder: you decide when you have them all.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
   </header>
 
   <main class="bench">

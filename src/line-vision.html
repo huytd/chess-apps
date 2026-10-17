@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,700&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 /*PIECES*/
 /*COMMON*/
@@ -10,11 +10,12 @@
 /* level row */
 .level-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .level{display:flex;align-items:center;gap:8px}
-.lvl-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2);cursor:pointer;font-weight:600;font-size:16px;line-height:1}
+.lvl-btn{width:30px;height:30px;border-radius:50%;border:1px solid var(--line-strong);background:var(--surface);cursor:pointer;font-weight:600;font-size:16px;line-height:1}
+.lvl-btn:hover:not(:disabled){border-color:var(--muted)}
 .lvl-btn:disabled{opacity:.4;cursor:default}
-.lvl-num{font-family:var(--f-display);font-weight:800;font-size:26px;line-height:1;min-width:2ch;text-align:center;font-variant-numeric:tabular-nums}
+.lvl-num{font-family:var(--f-display);font-weight:600;font-size:32px;font-variation-settings:"opsz" 96;line-height:1;min-width:2ch;text-align:center;font-variant-numeric:tabular-nums}
 .lvl-meta{display:flex;flex-direction:column;line-height:1.2}
-.lvl-meta b{font-size:14px}
+.lvl-meta b{font-family:var(--f-display);font-weight:600;font-size:16px}
 .lvl-meta span{font-size:12px;color:var(--muted)}
 .pips{display:flex;gap:5px;align-items:center}
 .pip{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--accent)}
@@ -24,7 +25,7 @@
 /* scoresheet */
 .context{margin:14px 0 8px;font-size:13px;color:var(--muted)}
 .context b{color:var(--ink);font-weight:600}
-.sheet{display:flex;flex-wrap:wrap;gap:6px 4px;font-family:var(--f-mono);font-size:17px;line-height:1.3;padding:12px;border-radius:10px;background:var(--surface-2);border:1px dashed var(--line)}
+.sheet{display:flex;flex-wrap:wrap;gap:6px 4px;font-family:var(--f-mono);font-size:17px;line-height:1.3;padding:12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line)}
 .mv{display:inline-flex;align-items:baseline;gap:3px;padding:2px 6px;border-radius:6px;border:0;background:transparent;font:inherit;cursor:default}
 .mv .no{color:var(--muted);font-size:.82em}
 .mv .san{font-weight:600}
@@ -39,9 +40,11 @@
 .tray-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
 .tray-head span{font-size:12px;color:var(--muted)}
 .tray{display:grid;grid-template-columns:repeat(7, minmax(0,1fr));gap:4px;touch-action:none;user-select:none;-webkit-user-select:none}
-.spare{aspect-ratio:1;border-radius:8px;border:1px solid transparent;background:var(--surface-2);cursor:grab;position:relative;padding:0;max-width:100%}
+.spare{aspect-ratio:1;border-radius:10px;border:1px solid var(--line);background:var(--sq-light);cursor:grab;position:relative;padding:0;max-width:100%}
 .spare .pc{inset:8%}
+.spare:hover{border-color:var(--line-strong)}
 .spare[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.spare.trash{background:var(--surface-2)}
 .trash{grid-row:span 2;aspect-ratio:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer}
 .trash svg{width:20px;height:20px}
 .trash.over{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
@@ -67,7 +70,7 @@
 <div class="app">
   <header class="top">
     <div class="brand"><div class="brand-mark" aria-hidden="true"></div><h1>Chess Vision Lab</h1></div>
-    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">While solving</div><label class="opt" for="opt-auto"><input type="checkbox" id="opt-auto"><span class="txt"><b>Check automatically</b><span>Runs the check as soon as your move count matches the line.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">After a correct answer</div><label class="opt" for="opt-next"><input type="checkbox" id="opt-next"><span class="txt"><b>Go to the next line automatically</b><span>The next line loads after a short pause. Replay or Stay cancels it.</span></span><span class="switch" aria-hidden="true"></span></label><label class="opt" for="opt-level"><input type="checkbox" id="opt-level"><span class="txt"><b>Level up automatically</b><span>Move up a level after 3 first-check solves in a row. Turn off to stay at your chosen level.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
+    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">While solving</div><label class="opt" for="opt-auto"><input type="checkbox" id="opt-auto"><span class="txt"><b>Check automatically</b><span>Runs the check as soon as your move count matches the line.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">After a correct answer</div><label class="opt" for="opt-next"><input type="checkbox" id="opt-next"><span class="txt"><b>Go to the next line automatically</b><span>The next line loads after a short pause. Replay or Stay cancels it.</span></span><span class="switch" aria-hidden="true"></span></label><label class="opt" for="opt-level"><input type="checkbox" id="opt-level"><span class="txt"><b>Level up automatically</b><span>Move up a level after 3 first-check solves in a row. Turn off to stay at your chosen level.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
   </header>
 
   <main class="bench" id="tool-line">
