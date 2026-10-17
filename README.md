@@ -22,12 +22,14 @@ Train your eye for danger, one position at a time, in three steps.
 You get a random position from a master game: move 6 onwards, side to move not in check, and not right after a capture (where the answer is usually just to take back). The last move is highlighted. Work through it step by step; each step unlocks the next on the same board:
 
 1. **Hanging pieces.** Tap every piece that hangs: the opponent's pieces you can win now, and your own pieces the opponent could win if it were their move. A piece hangs when taking it wins material, judged by the exchange on its square: both sides take turns capturing there with their cheapest piece and may stop at any point. Only legal captures count, so pins and x-ray attackers are taken into account. About one position in five has nothing hanging, and the right answer is to check with nothing marked.
-2. **Their threats.** Draw an arrow for every capture and check the opponent would have if it were their move.
-3. **My attacks.** Draw an arrow for every capture and check you can play now.
+2. **Their threats.** Draw an arrow for each capture or check the opponent could really hurt you with if it were their move: a **real** threat gains them at least a pawn and a half on Stockfish's current evaluation (the bar allows for the free tempo they'd get). **Minor** ones are optional, and drawing a **harmless** one is wrong.
+3. **My attacks.** Draw an arrow for each capture or check of yours that **works**: Stockfish rates it within a pawn of its best move. **Dubious** ones (up to two and a half pawns worse) are optional, and drawing a **trap** is wrong.
+
+Steps 2 and 3 wait for Stockfish to judge the position (it starts on all three steps as soon as the position loads). Without the engine, material decides: captures that win material must be found, even trades are optional, and losing ones are wrong.
 
 Draw an arrow by dragging from a piece to its target, or tap the piece and then the target. After **Check**, wrong marks turn red and you can keep looking or press **Show all**. Found answers are green and missed ones dashed orange. Stockfish (running in the page) reviews every step:
 - **Hanging pieces:** your captures **work**, are **dubious** or are a **trap**, and the opponent's threats are **real**, **minor** or **harmless**, judged against the current evaluation.
-- **Threats and attacks:** each move is rated against Stockfish's best move.
+- **Threats and attacks:** every capture and check is listed with its grade, so you can see why the ones you left out didn't count.
 
 Tap a row to see Stockfish's line. Finished steps stay open in the stepper for review.
 

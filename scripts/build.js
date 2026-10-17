@@ -61,7 +61,7 @@ const APPS = [
   { src: 'src/line-vision.html', out: 'index.html', name: 'Line Vision',
     description: 'Chess visualization training: read a line of moves, picture it, then set up the final position.' },
   { src: 'src/spot-the-danger.html', out: 'spot-the-danger.html', name: 'Spot the Danger',
-    description: 'Chess tactics training in three steps on a master-game position: spot the hanging pieces, the opponent\'s threats and your own attacks, then see what Stockfish makes of each.' },
+    description: 'Chess tactics training in three steps on a master-game position: spot the hanging pieces, the opponent\'s real threats and the attacks that work for you, judged by Stockfish.' },
 ];
 const common = rd('src/common.css').trim();
 fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
