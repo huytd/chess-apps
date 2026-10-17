@@ -17,14 +17,14 @@ Lines get one half-move longer per level (level 1 = 2 half-moves, level 15 = 16)
 To think through a line, right-click a square to highlight it or right-drag to draw an arrow (green by default; hold Shift for red, Alt for blue, Shift+Alt for yellow). Repeat the same mark to remove it; left-click the board or press Esc to clear them all.
 
 ### Spot the Danger
-Train your eye for forcing moves.
+Train your eye for loose pieces.
 
-1. You get a random position from a master game (move 6 onwards, side to move not in check, 2–12 attacks to find). The last move is highlighted.
-2. Draw an arrow for every legal capture and check the side to move can play: drag from the piece to its target, or tap the piece and then the target. Draw the same arrow again to remove it.
-3. Press **Check**. Arrows that are not attacks turn red, and you can keep looking or press **Show all**.
-4. Found attacks are green, missed ones dashed amber. Stockfish (running in the page) rates each attack against its own best move (Best, Good, Dubious, Bad) and shows its line when you tap one.
+1. You get a random position from a master game: move 6 onwards, side to move not in check, and not right after a capture (where the answer is usually just to take back). The last move is highlighted.
+2. Tap every **hanging piece**: the opponent's pieces you can win now, and your own pieces the opponent could win if it were their move. A piece hangs when taking it wins material, judged by the exchange on its square: both sides take turns capturing there with their cheapest piece and may stop at any point. Only legal captures count, so pins and x-ray attackers are taken into account. About one position in five has nothing hanging, and the right answer is to check with nothing marked.
+3. Press **Check**. Marks on pieces that don't hang turn red, and you can keep looking or press **Show all**.
+4. Found pieces get a green ring and missed ones a dashed orange ring, with an arrow from the piece that wins each one. Stockfish (running in the page) judges every capture against the current evaluation. Your captures **work**, are **dubious** or are a **trap**. The opponent's threats are **real**, **minor** or **harmless**. Tap a row to see Stockfish's line.
 
-**Their threats** asks the same question for the opponent, as if it were their move: what is hanging and what checks are coming. Settings let you count captures only and show how many there are to find. Perfect answers on the first check build a streak. Progress is saved in the browser.
+**My attacks** and **Their threats** are the broader drill: draw an arrow for every legal capture and check (or captures only) the side to move has, or the opponent would have if it were their move. Stockfish rates each one against its best move. Settings let you leave out checks and show how many there are to find. Perfect answers on the first check build a streak, kept separately for the two drills. Progress is saved in the browser.
 
 ## Development
 
