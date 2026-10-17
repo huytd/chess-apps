@@ -312,7 +312,7 @@ a:hover{text-decoration-color:currentColor}
 <div class="app">
   <header class="top">
     <div class="brand"><div class="brand-mark" aria-hidden="true"></div><h1>Chess Vision Lab</h1></div>
-    <div class="top-right"><nav class="tools" aria-label="Drills"><a class="tool-tab" href="index.html">Line Vision</a><a class="tool-tab" href="spot-the-danger.html" aria-current="page">Spot the Danger</a></nav><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">What counts</div><label class="opt" for="opt-checks"><input type="checkbox" id="opt-checks"><span class="txt"><b>Include checks</b><span>Every check counts, not just captures. Changing this starts a new position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">While solving</div><label class="opt" for="opt-total"><input type="checkbox" id="opt-total"><span class="txt"><b>Show how many there are</b><span>The counter shows the total to find. Off is harder: you decide when you have them all.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
+    <div class="top-right"><nav class="tools" aria-label="Drills"><a class="tool-tab" href="index.html">Line Vision</a><a class="tool-tab" href="spot-the-danger.html" aria-current="page">Spot the Danger</a></nav><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">What counts</div><label class="opt" for="opt-checks"><input type="checkbox" id="opt-checks"><span class="txt"><b>Include checks</b><span>Every check counts, not just captures. Changing this starts a new position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">While solving</div><label class="opt" for="opt-total"><input type="checkbox" id="opt-total"><span class="txt"><b>Show how many there are</b><span>The counter shows the total to find. Off is harder: you decide when you have them all.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">After a correct answer</div><label class="opt" for="opt-next"><input type="checkbox" id="opt-next"><span class="txt"><b>Go on automatically</b><span>Moves to the next step (or the next position) after a short pause. Stay, or tapping a move in the review, cancels it.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
   </header>
 
   <main class="bench">
@@ -378,7 +378,7 @@ const KEY='cvl-danger-v1';
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')return s;}catch(e){}return null;}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}}
 const blank=()=>({done:0,perfect:0,streak:0,best:0});
-const P=Object.assign({checks:true,showTotal:false,recent:[]},load()||{});
+const P=Object.assign({checks:true,showTotal:false,autoNext:true,recent:[]},load()||{});
 /* Stats count rounds. Older saves kept them per drill (or, before that, flat); rounds start from the hanging-pieces ones. */
 if(!P.stats)P.stats={};
 if(!P.stats.rounds)P.stats.rounds=P.stats.hanging||blank();
@@ -576,7 +576,13 @@ function topUp(){
 }
 /* Settings that change the answers make prepared positions stale. */
 function dropAhead(){clearTimeout(topUpTimer);for(const a of ahead)Engine.drop(a);ahead.length=0;}
+/* Going on automatically after a correct answer, as in Line Vision: a countdown on the main button, Stay cancels. */
+let nextTimer=null;
+function armNext(ms){clearTimeout(nextTimer);S.nextAt=Date.now()+ms;S.nextDur=ms;
+  nextTimer=setTimeout(()=>{nextTimer=null;if(S.phase==='done'&&S.nextAt){S.nextAt=null;goOn();}},ms);}
+function cancelNext(){clearTimeout(nextTimer);nextTimer=null;S.nextAt=null;}
 function enterStep(mode){
+  cancelNext();
   if(S.mode){const o={};for(const f of STEP_FIELDS)o[f]=S[f];S.saved[S.mode]=o;}
   const afen=attackFen(S.fen,mode);
   // legal moves of the step's side, by from-to (promotions as queens)
@@ -761,6 +767,7 @@ function claimNone(){
 function reveal(){if(S.phase!=='find'||!targets())return;judgeThen(()=>{S.sel=null;grade();finish(false);});}
 /* A round counts once every step is answered; it is perfect when each step was right on the first check. */
 function finish(perfect){
+  if(perfect&&P.autoNext)armNext(2000);
   S.phase='done';S.perfect=perfect;S.firstTry=perfect&&S.attempts===1;
   S.results[S.mode]={firstTry:S.firstTry};
   if(!S.roundDone&&steps().every(m=>S.results[m])){
@@ -953,11 +960,15 @@ function renderFeedback(){
       act='<div class="row split"><span></span><button class="btn primary" data-a="next">Next position<span class="kbd">Enter</span></button></div>';
     }
   }
+  if(S.phase==='done'&&S.nextAt){
+    const left=Math.max(0,S.nextAt-Date.now());
+    act=act.replace('<button class="btn primary"','<button class="stay" data-a="stay">Stay</button><button class="btn primary counting" style="--dur:'+S.nextDur+'ms;--delay:-'+(S.nextDur-left)+'ms"');
+  }
   el.innerHTML=h+'<div class="actions">'+act+'</div>';
 }
 fbEl.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;
-  ({check,reveal,none:claimNone,next:newPosition,step:()=>enterStep(b.dataset.m)})[b.dataset.a]();
+  ({check,reveal,none:claimNone,next:newPosition,step:()=>enterStep(b.dataset.m),stay:()=>{cancelNext();render();}})[b.dataset.a]();
 });
 
 const ST={found:['✓','Good'],missed:['!','Missed'],wrong:['✕','Not right'],extra:['✓','Fine either way'],skip:['','Rightly left out'],alt:['','Also wins; one was enough']};
@@ -1028,6 +1039,7 @@ function renderMoveReview(ev,ready){
 }
 $('atk-list').addEventListener('click',e=>{
   const b=e.target.closest('.atk');if(!b)return;
+  cancelNext();  // studying a move: stay on this step
   S.focus=S.focus===b.dataset.k?null:b.dataset.k;render();
 });
 
@@ -1112,7 +1124,8 @@ $('stepper').addEventListener('click',e=>{
 });
 $('btn-undo').onclick=undo;$('btn-clear').onclick=clearPicks;
 $('btn-flip').onclick=()=>{S.flipped=!S.flipped;render();};
-$('opt-checks').checked=!!P.checks;$('opt-total').checked=!!P.showTotal;
+$('opt-checks').checked=!!P.checks;$('opt-total').checked=!!P.showTotal;$('opt-next').checked=!!P.autoNext;
+$('opt-next').onchange=e=>{P.autoNext=e.target.checked;if(!P.autoNext)cancelNext();save();render();};
 $('opt-checks').onchange=e=>{P.checks=e.target.checked;dropAhead();newPosition();};
 $('opt-total').onchange=e=>{P.showTotal=e.target.checked;save();render();};
 const setBtn=$('btn-settings'),setPanel=$('settings-panel');
