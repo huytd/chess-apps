@@ -829,6 +829,9 @@ function render(){
     cnt.title=!P.showTotal?'Turn on “Show how many there are” in Settings to see the total':t==null?'Waiting for Stockfish':win?'There is a win: one winning move is enough':'There '+(t===1?'is 1':'are '+t)+' to find';}
   $('btn-undo').disabled=!finding||!S.history.length;$('btn-clear').disabled=!finding||!picks().length;
   $('legend').hidden=!graded;
+  $('legend').innerHTML=S.mode==='move'
+    ?'<span><i style="--c:var(--arrow-found)"></i>Your move (good)</span><span><i style="--c:var(--arrow-wrong)"></i>Your move (not good)</span><span><i class="dash" style="--c:var(--arrow-mine)"></i>Stockfish’s move</span>'
+    :'<span><i style="--c:var(--arrow-found)"></i>Found</span><span><i class="dash" style="--c:var(--arrow-missed)"></i>Missed</span><span><i style="--c:var(--arrow-mine)"></i>Optional</span><span><i style="--c:var(--arrow-wrong)"></i>Wrong</span>';
   // stats
   const st=stats();
   $('st-done').textContent=st.done;$('st-perfect').textContent=st.done?Math.round(100*st.perfect/st.done)+'%':'–';
@@ -837,17 +840,23 @@ function render(){
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
 
-const COLORS={mine:'var(--arrow-mine)',found:'var(--arrow-found)',wrong:'var(--arrow-wrong)',missed:'var(--arrow-missed)'};
+const COLORS={mine:'var(--arrow-mine)',found:'var(--arrow-found)',wrong:'var(--arrow-wrong)',missed:'var(--arrow-missed)',engine:'var(--arrow-mine)'};
 function arrowSvg(f,t,kind,op,wide){
   const pt=i=>{const d=S.flipped?63-i:i;return [d%8+.5,Math.floor(d/8)+.5];};
   const [x1,y1]=pt(f),[x2,y2]=pt(t),len=Math.hypot(x2-x1,y2-y1),ux=(x2-x1)/len,uy=(y2-y1)/len;
   const H=wide?.48:.42,W=wide?.34:.3,bx=x2-ux*H,by=y2-uy*H,r=n=>n.toFixed(3),c=COLORS[kind];
-  return '<g opacity="'+op+'" style="fill:'+c+';stroke:'+c+'"><line x1="'+r(x1)+'" y1="'+r(y1)+'" x2="'+r(bx+ux*.02)+'" y2="'+r(by+uy*.02)+'" stroke-width="'+(wide?.21:.16)+'" stroke-linecap="round"'+(kind==='missed'?' stroke-dasharray=".2 .16"':'')+'/>'+
+  return '<g opacity="'+op+'" style="fill:'+c+';stroke:'+c+'"><line x1="'+r(x1)+'" y1="'+r(y1)+'" x2="'+r(bx+ux*.02)+'" y2="'+r(by+uy*.02)+'" stroke-width="'+(wide?.21:.16)+'" stroke-linecap="round"'+(kind==='missed'||kind==='engine'?' stroke-dasharray=".2 .16"':'')+'/>'+
     '<polygon style="stroke:none" points="'+r(x2)+','+r(y2)+' '+r(bx-uy*W)+','+r(by+ux*W)+' '+r(bx+uy*W)+','+r(by-ux*W)+'"/></g>';
 }
 function renderArrows(){
   let list;
-  if(S.phase==='done'){
+  if(S.phase==='done'&&S.mode==='move'){
+    // your move (green if good, red if not) and Stockfish's choice (dashed), both always shown
+    const J=mineJudge(), k=S.arrows[0]&&akey(S.arrows[0]), b=J&&J.ev.best?moveObj(J.ev.best.move):null;
+    list=[];
+    if(b&&b.key!==k)list.push({f:b.from,t:b.to,k:b.key,kind:'engine'});
+    for(const a of S.arrows)list.push({f:a.f,t:a.t,k:akey(a),kind:S.perfect?'found':'wrong'});
+  }else if(S.phase==='done'){
     // the ones to find (found or missed), plus the player's optional and wrong arrows
     const drawn=new Set(S.arrows.map(akey));
     const enough=(oneOf()||S.mode==='move')&&S.result.found>0;
@@ -909,11 +918,13 @@ function renderFeedback(){
   }else if(S.mode==='move'){
     const J=mineJudge(), k=S.arrows[0]&&akey(S.arrows[0]), mine1=k&&S.legal.has(k)?moveObj(S.legal.get(k)):null;
     const g=mine1&&J?moveGrade(lineByKey(J.ev,mine1.key)):null, best=J&&J.ev.best?moveObj(J.ev.best.move):null;
-    if(S.perfect){
-      el.classList.add('good');
-      h='<h3>'+(g?g.tag[1]+' move':'Good move')+(S.firstTry?'':' after '+plural(S.attempts,'check'))+'</h3><p>'+
-        (best&&mine1&&best.key===mine1.key?esc(mine1.san)+' is Stockfish’s choice too.':best?'Stockfish’s choice was '+esc(best.san)+'; yours does the job as well.':'')+'</p>';
-    }else h='<h3>'+(best?'Stockfish plays '+esc(best.san):'Here’s the move')+'</h3><p>'+(mine1&&g?'Your '+esc(mine1.san)+' was rated '+g.tag[1].toLowerCase()+'. ':'')+'Its line is below.</p>';
+    // name both moves, with their evaluations
+    const lm=mine1&&J?lineByKey(J.ev,mine1.key):null, same=best&&mine1&&best.key===mine1.key;
+    const yours=mine1?'You played <b>'+esc(mine1.san)+'</b>'+(lm?' ('+fmtEval(lm,S.attacker)+(g?', '+g.tag[1]:'')+')':'')+'.':'You didn’t play a legal move.';
+    const theirs=best?(same?' That’s Stockfish’s choice too.':' Stockfish’s choice: <b>'+esc(best.san)+'</b> ('+fmtEval(J.ev.best,S.attacker)+').'):'';
+    if(S.perfect){el.classList.add('good');h='<h3>'+(g?g.tag[1]+' move':'Good move')+(S.firstTry?'':' after '+plural(S.attempts,'check'))+'</h3>';}
+    else h='<h3>'+(best?'Stockfish plays '+esc(best.san):'Here’s the move')+'</h3>';
+    h+='<p>'+yours+theirs+'</p><p class="hint">Tap a move below to see it on the board with its line.</p>';
     if(S.roundDone){const kk=steps().filter(m=>S.results[m].firstTry).length;
       h+='<p class="hint">This position: '+kk+' of '+steps().length+' steps right on the first check.'+(kk===steps().length&&st.streak>1?' '+st.streak+' perfect positions in a row.':'')+'</p>';}
     act='<div class="row split"><span></span><button class="btn primary" data-a="next">Next position<span class="kbd">Enter</span></button></div>';
@@ -1001,7 +1012,8 @@ function renderMoveReview(ev,ready){
   $('review-depth').textContent=Engine.state==='error'?'No engine':ready?'Stockfish · depth '+DEPTH:'Stockfish thinking…';
   $('top-move').hidden=true;
   $('atk-list').innerHTML=rows.map(({x,you})=>{const l=J?lineByKey(J.ev,x.key):null, g=moveGrade(l);
-    return rowHtml(x.key,you?(S.perfect?'found':'wrong'):(S.perfect?'skip':'missed'),x.san,you?'your move':'Stockfish’s choice',l,g&&g.tag,S.attacker);}).join('')||'<p class="top-move">No move drawn.</p>';
+    const same=you&&J&&J.ev.best&&J.ev.best.move.slice(0,4)===x.key;
+    return rowHtml(x.key,you?(S.perfect?'found':'wrong'):(S.perfect?'skip':'missed'),x.san,same?'your move · Stockfish’s choice too':you?'your move':'Stockfish’s choice',l,g&&g.tag,S.attacker);}).join('')||'<p class="top-move">No move drawn.</p>';
   const pv=$('pv'), f=S.focus&&rows.find(r=>r.x.key===S.focus), fl=f&&J?lineByKey(J.ev,f.x.key):null;
   pv.hidden=!rows.length;
   if(fl&&fl.pv)pv.innerHTML='<b>'+esc(f.x.san)+'</b> '+fmtEval(fl,S.attacker)+' · <span class="line">'+esc(pvText(S.afen,fl.pv,10))+'</span>';
