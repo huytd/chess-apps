@@ -1,12 +1,13 @@
 {
   "name": "chess-apps",
   "private": true,
-  "description": "Chess Vision Lab: browser-based chess visualization drills.",
+  "description": "Chess Vision Lab: browser-based chess training drills.",
   "scripts": {
     "build": "node scripts/build.js"
   },
   "devDependencies": {
     "chess.js": "1.4.0",
-    "chessground": "9.1.1"
+    "chessground": "9.1.1",
+    "stockfish": "19.0.0"
   }
 }
