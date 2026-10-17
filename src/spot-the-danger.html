@@ -36,15 +36,6 @@
 .engine-chip.error i{background:var(--bad-solid)}
 @keyframes blink{50%{opacity:.25}}
 .board.drawing .sq.own{cursor:pointer}
-/* hanging-piece marks: a ring around the piece, drawn above it and below the arrows */
-.ring{position:absolute;inset:6%;border-radius:50%;border:4px solid var(--c);z-index:2;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.18), inset 0 0 0 1px rgba(0,0,0,.18)}
-.ring.mine{--c:var(--arrow-mine)} .ring.found{--c:var(--arrow-found)} .ring.wrong{--c:var(--arrow-wrong)}
-.ring.missed{--c:var(--arrow-missed);border-style:dashed}
-.ring.dim{opacity:.3}
-@keyframes ringin{from{transform:scale(1.25);opacity:0}to{transform:none;opacity:1}}
-.ring.new{animation:ringin .16s ease-out}
-.atk-group{margin:10px 0 2px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.atk-group:first-child{margin-top:0}
 @media (max-width:400px){.stepper button{font-size:12px;padding:7px 8px;gap:5px}}
 @media (max-width:560px){.turn b{font-size:21px}.turn-dot{width:19px;height:19px}.task-head{gap:10px}.task{margin-top:10px;font-size:14.5px}.task-meta{margin-top:6px}}
 
@@ -84,7 +75,7 @@
 <div class="app">
   <header class="top">
     <div class="brand"><div class="brand-mark" aria-hidden="true"></div><h1>Chess Vision Lab</h1></div>
-    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">Steps</div><label class="opt" for="opt-only"><input type="checkbox" id="opt-only"><span class="txt"><b>Hanging pieces only</b><span>Skip the threats and attacks steps for quicker rounds. Changing this starts a new position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">Threats and attacks steps</div><label class="opt" for="opt-checks"><input type="checkbox" id="opt-checks"><span class="txt"><b>Include checks</b><span>Every check counts, not just captures. Changing this starts a new position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">While solving</div><label class="opt" for="opt-total"><input type="checkbox" id="opt-total"><span class="txt"><b>Show how many there are</b><span>The counter shows the total to find. Off is harder: you decide when you have them all.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
+    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">What counts</div><label class="opt" for="opt-checks"><input type="checkbox" id="opt-checks"><span class="txt"><b>Include checks</b><span>Every check counts, not just captures. Changing this starts a new position.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">While solving</div><label class="opt" for="opt-total"><input type="checkbox" id="opt-total"><span class="txt"><b>Show how many there are</b><span>The counter shows the total to find. Off is harder: you decide when you have them all.</span></span><span class="switch" aria-hidden="true"></span></label></div></div></div>
   </header>
 
   <main class="bench">
@@ -92,9 +83,8 @@
       <div class="task-head">
         <div class="turn"><i class="turn-dot" id="turn-dot" aria-hidden="true"></i><b id="turn-label">White to move</b></div>
         <nav class="stepper" id="stepper" aria-label="Steps for this position">
-          <button data-m="hanging" title="Step 1: hanging pieces on either side"><i>1</i><span>Hanging</span></button>
-          <button data-m="theirs" title="Step 2: the opponent's captures and checks that would really hurt"><i>2</i><span>Threats</span></button>
-          <button data-m="mine" title="Step 3: your captures and checks that work"><i>3</i><span>Attacks</span></button>
+          <button data-m="theirs" title="Step 1: the opponent's captures and checks that would really hurt"><i>1</i><span>Dangers</span></button>
+          <button data-m="mine" title="Step 2: your captures and checks that work"><i>2</i><span>Chances</span></button>
         </nav>
       </div>
       <p class="task" id="task"></p>
@@ -106,12 +96,12 @@
         <div class="row"><span class="view-tag" id="view-tag">Your arrows</span><span class="count-pill" id="arrow-count" aria-live="polite"></span></div>
         <div class="row">
           <button class="btn small ghost" id="btn-undo" title="Undo the last change (Ctrl+Z)">Undo</button>
-          <button class="btn small ghost" id="btn-clear" title="Remove all your marks">Clear</button>
+          <button class="btn small ghost" id="btn-clear" title="Remove all your arrows">Clear</button>
           <button class="btn small ghost" id="btn-flip" title="Flip the board. Each position starts from the side to move.">Flip</button>
         </div>
       </div>
       <div class="board-shell"><div class="board" id="board" role="grid" aria-label="Chess board"></div><svg class="arrows" id="arrows" viewBox="0 0 8 8" aria-hidden="true"></svg></div>
-      <div class="board-bar"><div class="legend" id="legend" hidden><span><i style="--c:var(--arrow-found)"></i>Found</span><span><i class="dash" style="--c:var(--arrow-missed)"></i>Missed</span><span id="legend-extra"><i style="--c:var(--arrow-mine)"></i>Optional</span><span><i style="--c:var(--arrow-wrong)"></i><span id="legend-wrong">Wrong</span></span></div></div>
+      <div class="board-bar"><div class="legend" id="legend" hidden><span><i style="--c:var(--arrow-found)"></i>Found</span><span><i class="dash" style="--c:var(--arrow-missed)"></i>Missed</span><span id="legend-extra"><i style="--c:var(--arrow-mine)"></i>Optional</span><span><i style="--c:var(--arrow-wrong)"></i>Wrong</span></div></div>
     </div>
 
     <aside class="side">
@@ -140,20 +130,21 @@
 (function(){
 "use strict";
 const FILES='abcdefgh', DEPTH=14, MIN_PLY=12, MAX_PLY=100, MAX_ATTACKS=12, MAX_HANGING=4, SAFE_SHARE=.2;
-/* Each position is a round of steps on the same board: what hangs, what the opponent threatens, what you can do. */
-const STEPS={hanging:'Hanging pieces',theirs:'Their threats',mine:'My attacks'};
+/* Each position is a round of two steps on the same board: what the opponent could do to you, then what you can do.
+   Internally the dangers step is "theirs" (the opponent's captures and checks) and the chances step is "mine". */
+const STEPS={theirs:'Dangers',mine:'Chances'};
 
 /* ---------- persistence ---------- */
 const KEY='cvl-danger-v1';
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')return s;}catch(e){}return null;}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}}
 const blank=()=>({done:0,perfect:0,streak:0,best:0});
-const P=Object.assign({checks:true,showTotal:false,only:false,recent:[]},load()||{});
+const P=Object.assign({checks:true,showTotal:false,recent:[]},load()||{});
 /* Stats count rounds. Older saves kept them per drill (or, before that, flat); rounds start from the hanging-pieces ones. */
 if(!P.stats)P.stats={};
 if(!P.stats.rounds)P.stats.rounds=P.stats.hanging||blank();
-delete P.mode;delete P.done;delete P.perfect;delete P.streak;delete P.best;delete P.stats.hanging;delete P.stats.attacks;
-const steps=()=>P.only?['hanging']:['hanging','theirs','mine'];
+delete P.mode;delete P.only;delete P.done;delete P.perfect;delete P.streak;delete P.best;delete P.stats.hanging;delete P.stats.attacks;
+const steps=()=>['theirs','mine'];
 
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
@@ -177,7 +168,7 @@ function replay(gi,ply){
   }
   return {fen:c.fen(),check:c.inCheck(),over:c.isGameOver(),last:{from:idx(last.from),to:idx(last.to),label:moveLabel(ply-1)+last.san,capture:!!last.captured}};
 }
-/* "Their threats" (and the opponent's half of hanging pieces) hands the move to the opponent on the same board.
+/* The dangers step (and the opponent's half of the loose pieces) hands the move to the opponent on the same board.
    Positions are picked with the side to move not in check, so the flipped position is always legal. */
 function attackFen(fen,mode){if(mode!=='theirs')return fen;const f=fen.split(' ');f[1]=f[1]==='w'?'b':'w';f[3]='-';return f.join(' ');}
 /* Every legal capture (and check, if counted) as one arrow per from-to pair. Promotions keep the queen when it qualifies. */
@@ -188,7 +179,7 @@ function attacksIn(fen,withChecks){
     if(!cap&&!(withChecks&&chk))continue;
     const key=m.from+m.to;
     if(by[key]&&m.promotion!=='q')continue;
-    by[key]={key,afen:fen,from:idx(m.from),to:idx(m.to),san:m.san,uci:m.from+m.to+(m.promotion||''),cap,chk};
+    by[key]={key,afen:fen,from:idx(m.from),to:idx(m.to),san:m.san,uci:m.from+m.to+(m.promotion||''),cap,chk,victim:m.captured};
   }
   return Object.values(by);
 }
@@ -211,8 +202,9 @@ function exchange(c,sq){
   let rest=0;for(let k=gains.length-1;k>=1;k--)rest=Math.max(0,gains[k]-rest);
   return {gain:gains.length?gains[0]-rest:0,first};
 }
-/* A piece hangs when its side's opponent wins material by starting an exchange on it: the side to move's targets now,
-   and the side to move's own pieces as if the opponent were to move. */
+/* A piece is loose (hangs) when its side's opponent wins material by starting an exchange on it: the side to move's
+   targets now, and the side to move's own pieces as if the opponent were to move. Taking one is usually a real threat
+   or an attack that works, so the review names it; position picking uses them too. */
 function hangingIn(fen){
   const out=[];
   for(const who of ['mine','theirs']){
@@ -228,10 +220,10 @@ function hangingIn(fen){
   }
   return out;
 }
-function answersFor(fen,mode){return mode==='hanging'?hangingIn(fen):attacksIn(attackFen(fen,mode),P.checks);}
 /* Positions are drawn uniformly over every eligible ply of every game, skipping games seen recently, with the side to
-   move not in check, and not right after a capture (where the answer is usually just to take back). Hanging pieces
-   wants 1–4 targets, or, about one time in five, none at all; the attack steps want no more than a dozen arrows each. */
+   move not in check, and not right after a capture (where the answer is usually just to take back). Each step may have
+   no more than a dozen captures and checks to judge. Most positions have 1–4 loose pieces, so at least one step is
+   likely to have something to find; about one in five has none, so "nothing here" stays a real answer. */
 function pick(){
   const w=[];let total=0;
   for(let gi=0;gi<GAMES.length;gi++){total+=Math.max(0,Math.min(LENS[gi],MAX_PLY)-MIN_PLY+1);w.push(total);}
@@ -243,9 +235,14 @@ function pick(){
     if(recent.has(gi)&&tries<250)continue;
     const r=replay(gi,ply);
     if(r.check||r.over||r.last.capture)continue;
-    const answers={};for(const m of steps())answers[m]=answersFor(r.fen,m);
-    const cand=Object.assign({gi,ply,answers},r), n=answers.hanging.length;
-    const fits=steps().every(m=>m==='hanging'||answers[m].length<=MAX_ATTACKS);
+    const answers={}, loose=hangingIn(r.fen);
+    for(const m of steps()){
+      answers[m]=attacksIn(attackFen(r.fen,m),P.checks);
+      const side=m==='mine'?'chance':'danger';
+      for(const a of answers[m])a.loose=a.cap&&loose.some(h=>h.side===side&&h.key===a.key.slice(2));
+    }
+    const cand=Object.assign({gi,ply,answers},r), n=loose.length;
+    const fits=steps().every(m=>answers[m].length<=MAX_ATTACKS);
     if(fits&&(wantSafe?n===0:n>=1&&n<=MAX_HANGING)){fallback=cand;break;}
     if(!fallback)fallback=cand;
   }
@@ -296,56 +293,50 @@ const Engine=(function(){
 
 /* ---------- state ---------- */
 /* The S fields below "mode" belong to the current step; each step's are kept in S.saved while another step is shown.
-   Hanging pieces: answers are squares and the player marks pieces. Attack steps: answers are from-to arrows. */
+   Answers are from-to arrows. */
 const S={gi:0,ply:0,fen:'',last:null,board:null,turn:'w',flipped:false,evals:{},answersBy:{},saved:{},results:{},roundDone:false,
-  mode:null,afen:'',attacker:'w',answers:[],arrows:[],marks:[],history:[],graded:null,attempts:0,phase:'find',result:null,focus:null,perfect:false,firstTry:false,
-  sel:null,preview:null,anim:null,fresh:null,closing:false};
-const STEP_FIELDS=['arrows','marks','history','graded','attempts','phase','result','focus','perfect','firstTry'];
-const hangMode=()=>S.mode==='hanging';
+  mode:null,afen:'',attacker:'w',answers:[],arrows:[],history:[],graded:null,attempts:0,phase:'find',result:null,focus:null,perfect:false,firstTry:false,
+  sel:null,preview:null,anim:null,closing:false};
+const STEP_FIELDS=['arrows','history','graded','attempts','phase','result','focus','perfect','firstTry'];
 const stats=()=>P.stats.rounds;
 
 function newPosition(){
   const p=pick();
   Object.assign(S,{gi:p.gi,ply:p.ply,fen:p.fen,last:p.last,board:parse(p.fen),turn:p.fen.split(' ')[1],evals:{},answersBy:p.answers,saved:{},results:{},roundDone:false,mode:null});
   S.flipped=S.turn==='b';
-  // analyse every step up front, so later steps are ready by the time they are reached
-  Engine.cancel();
-  for(const m of steps())analyse(m);
-  save();enterStep('hanging');
+  analyse();
+  save();enterStep(steps()[0]);
 }
 function enterStep(mode){
   if(S.mode){const o={};for(const f of STEP_FIELDS)o[f]=S[f];S.saved[S.mode]=o;}
   const afen=attackFen(S.fen,mode);
-  Object.assign(S,{mode,afen,attacker:afen.split(' ')[1],answers:S.answersBy[mode],sel:null,preview:null,fresh:null,closing:false},
-    S.saved[mode]||{arrows:[],marks:[],history:[],graded:null,attempts:0,phase:'find',result:null,focus:null,perfect:false,firstTry:false});
+  Object.assign(S,{mode,afen,attacker:afen.split(' ')[1],answers:S.answersBy[mode],sel:null,preview:null,closing:false},
+    S.saved[mode]||{arrows:[],history:[],graded:null,attempts:0,phase:'find',result:null,focus:null,perfect:false,firstTry:false});
   render();
 }
 const nextStep=()=>steps()[steps().indexOf(S.mode)+1]||null;
 const reachable=m=>{const o=steps(), k=o.indexOf(m);return k===0||(k>0&&!!S.results[o[k-1]]);};
 function goOn(){const n=nextStep();if(n)enterStep(n);else newPosition();}
 
-/* Per step, and for each side with something to capture: the engine's free choice, then each capture via searchmoves.
-   The side to move in the step's position always gets the first search, for "Stockfish's choice". */
-const evalKey=m=>m==='hanging'?m:m+(P.checks?'+':'-');
+/* Both steps are analysed as soon as the position loads. Per step: the engine's free choice, then every capture and
+   check via searchmoves. The real position's free choice goes first, since it sets the bar for the dangers step. */
+const evalKey=m=>m+(P.checks?'+':'-');
 const currentEval=()=>S.evals[evalKey(S.mode)]||null;
-function analyse(mode){
-  const key=evalKey(mode), afen=attackFen(S.fen,mode), answers=S.answersBy[mode];
-  if(S.evals[key]||Engine.state==='error')return;
-  const by={[afen]:[]};
-  for(const a of answers)(by[a.afen]=by[a.afen]||[]).push(a.uci);
-  const ev=S.evals[key]={groups:{},done:false};let left=Object.keys(by).length;
-  const finish=()=>{if(--left)return;ev.done=true;if(currentEval()===ev)render();};
-  for(const fen in by){
-    const G=ev.groups[fen]={fen,best:null,moves:{}}, ucis=by[fen];
-    Engine.run({fen,multipv:1,depth:DEPTH,done:r=>{G.best=r[0]||null;if(!ucis.length)finish();}});
-    if(ucis.length)Engine.run({fen,multipv:ucis.length,depth:DEPTH,moves:ucis,done:r=>{for(const l of r)G.moves[l.move.slice(0,4)]=l;finish();}});
-  }
+function analyse(){
+  Engine.cancel();S.evals={};
+  if(Engine.state==='error')return;
+  const E={};
+  for(const m of steps()){const ucis=S.answersBy[m].map(a=>a.uci);E[m]=S.evals[evalKey(m)]={fen:attackFen(S.fen,m),ucis,best:null,moves:{},left:ucis.length?2:1,done:false};}
+  const tick=ev=>{if(--ev.left)return;ev.done=true;if(currentEval()===ev)render();};
+  const best=ev=>Engine.run({fen:ev.fen,multipv:1,depth:DEPTH,done:r=>{ev.best=r[0]||null;tick(ev);}});
+  const each=ev=>{if(ev.ucis.length)Engine.run({fen:ev.fen,multipv:ev.ucis.length,depth:DEPTH,moves:ev.ucis,done:r=>{for(const l of r)ev.moves[l.move.slice(0,4)]=l;tick(ev);}});};
+  best(E.mine);best(E.theirs);each(E.theirs);each(E.mine);
 }
 
 /* ---------- input ---------- */
 const akey=a=>sqName(a.f)+sqName(a.t);
-const picks=()=>hangMode()?S.marks.map(sqName):S.arrows.map(akey);
-function snapshot(){S.history.push({arrows:S.arrows.slice(),marks:S.marks.slice()});}
+const picks=()=>S.arrows.map(akey);
+function snapshot(){S.history.push(S.arrows.slice());}
 function toggleArrow(f,t){
   if(S.phase!=='find'||f===t)return;
   snapshot();
@@ -353,20 +344,11 @@ function toggleArrow(f,t){
   if(k>=0)S.arrows.splice(k,1);else S.arrows.push({f,t});
   render();
 }
-const markable=i=>!!S.board[i]&&S.board[i][1]!=='k';
-function toggleMark(i){
-  if(S.phase!=='find'||!markable(i))return;
-  snapshot();
-  const k=S.marks.indexOf(i);
-  if(k>=0)S.marks.splice(k,1);else{S.marks.push(i);S.fresh=i;}
-  render();
-}
-function undo(){if(S.phase!=='find'||!S.history.length)return;const h=S.history.pop();S.arrows=h.arrows;S.marks=h.marks;S.sel=null;render();}
-function clearPicks(){if(S.phase!=='find'||!picks().length)return;snapshot();S.arrows=[];S.marks=[];S.sel=null;render();}
-const own=i=>!hangMode()&&!!S.board[i]&&S.board[i][0]===S.attacker;
+function undo(){if(S.phase!=='find'||!S.history.length)return;S.arrows=S.history.pop();S.sel=null;render();}
+function clearPicks(){if(S.phase!=='find'||!S.arrows.length)return;snapshot();S.arrows=[];S.sel=null;render();}
+const own=i=>!!S.board[i]&&S.board[i][0]===S.attacker;
 function tapSquare(i){
   if(S.phase!=='find')return;
-  if(hangMode()){toggleMark(i);return;}
   if(S.sel==null){if(own(i)){S.sel=i;render();}return;}
   if(i===S.sel)S.sel=null;
   else if(own(i))S.sel=i;
@@ -375,8 +357,8 @@ function tapSquare(i){
 }
 
 /* ---------- check / reveal ---------- */
-/* Threats and attacks ask only for the captures and checks worth finding. With Stockfish, each is judged like a
-   hanging-piece capture: yours work (within a pawn of its best move), are dubious, or are traps; theirs are real
+/* Each step asks only for the captures and checks worth finding. With Stockfish, yours work (within a pawn of its
+   best move), are dubious, or are traps; theirs are real
    (gaining them a pawn and a half on the current evaluation, which their free tempo makes the fair bar), minor, or
    harmless. Works / real must be found, dubious / minor are fine either way, and drawing a trap or a harmless one is
    wrong. Without the engine, material decides: a capture that comes out ahead in the exchange must be found, one that
@@ -391,24 +373,24 @@ function materialTier(a){
 function tiersFor(mode){
   const ans=S.answersBy[mode], out={};
   if(Engine.state==='error'){for(const a of ans)out[a.key]=materialTier(a);return out;}
-  const ev=S.evals[evalKey(mode)], G=ev&&ev.done?ev.groups[attackFen(S.fen,mode)]:null;if(!G)return null;
+  const ev=S.evals[evalKey(mode)];if(!ev||!ev.done)return null;
   let base;
-  if(mode==='mine'){base=G.best?clampCp(G.best.cp):-Infinity;for(const k in G.moves)base=Math.max(base,clampCp(G.moves[k].cp));}
-  else{const H=S.evals.hanging, R=H&&H.done?H.groups[S.fen]:null;if(!R||!R.best)return null;base=clampCp(R.best.cp);}
+  if(mode==='mine'){base=ev.best?clampCp(ev.best.cp):-Infinity;for(const k in ev.moves)base=Math.max(base,clampCp(ev.moves[k].cp));}
+  else{const R=S.evals[evalKey('mine')];if(!R||!R.best)return null;base=clampCp(R.best.cp);}
   for(const a of ans){
-    const l=G.moves[a.uci.slice(0,4)];
+    const l=ev.moves[a.uci.slice(0,4)];
     if(!l){out[a.key]=materialTier(a);continue;}
     const v=clampCp(l.cp);
     out[a.key]=mode==='mine'?(base-v<=100?'need':base-v<=250?'ok':'bad'):(v+base>=150?'need':v+base>=50?'ok':'bad');
   }
   return out;
 }
-const tiers=()=>hangMode()?null:tiersFor(S.mode);
+const tiers=()=>tiersFor(S.mode);
 const tierLabel=t=>(Engine.state==='error'?TIER.material:TIER[S.mode])[t];
-/* What must be found: every hanging piece, or the threats / attacks that pass; null until they are known. */
-function targets(){if(hangMode())return S.answers;const t=tiers();return t?S.answers.filter(a=>t[a.key]==='need'):null;}
+/* What must be found: the real threats or the attacks that work; null until they are known. */
+function targets(){const t=tiers();return t?S.answers.filter(a=>t[a.key]==='need'):null;}
 function grade(){
-  const t=tiers(), need=new Set(targets().map(a=>a.key)), mine=picks(), optional=k=>!!t&&t[k]==='ok';
+  const t=tiers(), need=new Set(targets().map(a=>a.key)), mine=picks(), optional=k=>t[k]==='ok';
   const found=mine.filter(k=>need.has(k)), wrong=mine.filter(k=>!need.has(k)&&!optional(k)), extra=mine.filter(optional);
   S.graded={found:new Set(found),wrong:new Set(wrong),extra:new Set(extra)};
   S.result={found:found.length,wrong:wrong.length,missed:need.size-found.length,total:need.size};
@@ -441,15 +423,6 @@ function fmtEval(l,mover){
   if(l.mate!=null){const m=l.mate*s;return (m>0?'#':'#-')+Math.abs(m);}
   const v=l.cp*s/100;return (v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(1);
 }
-/* Hanging pieces judge each capture against the current evaluation (the side to move's best move): your captures
-   work or are traps; the opponent's would be real threats or harmless (the flipped position gives them a free tempo,
-   so the bar is a pawn and a half). */
-function verdictHanging(x,l,ev){
-  const G=ev.groups[S.fen];if(!G||!G.best)return null;
-  const e0=clampCp(G.best.cp), v=clampCp(l.cp);
-  if(x.side==='chance'){const d=e0-v;return d<=100?['best','Works']:d<=250?['dubious','Dubious']:['bad','Trap'];}
-  const g=v+e0;return g>=150?['bad','Real']:g>=50?['dubious','Minor']:['best','Harmless'];
-}
 function pvText(fen,pv,max){
   const c=new Chess(fen), out=[];
   for(const u of pv.slice(0,max)){
@@ -460,27 +433,13 @@ function pvText(fen,pv,max){
   return out.join(' ');
 }
 function sanOf(fen,uci){try{return new Chess(fen).move({from:uci.slice(0,2),to:uci.slice(2,4),promotion:uci[4]}).san;}catch(e){return uci;}}
-const lineOf=(a,ev)=>ev&&ev.done&&ev.groups[a.afen]?ev.groups[a.afen].moves[a.uci.slice(0,4)]||null:null;
-/* Why a marked piece does not hang: nothing can take it, or taking it does not win material. */
-function whyNotHanging(i){
-  const afen=attackFen(S.fen,S.board[i][0]===S.turn?'theirs':'mine'), sq=sqName(i);
-  return new Chess(afen).moves({verbose:true}).some(m=>m.to===sq&&m.captured)?'defended: taking it doesn’t win material':'nothing can take it';
-}
-
+const lineOf=(a,ev)=>ev&&ev.done?ev.moves[a.uci.slice(0,4)]||null:null;
 /* ---------- render ---------- */
 const boardEl=$('board'),fbEl=$('feedback'),sqEls=[];
 (function buildBoard(){for(let d=0;d<64;d++){const s=document.createElement('div');s.className='sq';s.setAttribute('role','gridcell');boardEl.appendChild(s);sqEls.push(s);}})();
 
-/* The ring on each marked or answer square: blue while marking, then found / wrong / missed. */
-function ringKinds(){
-  const out={};if(!hangMode())return out;
-  const done=S.phase==='done';
-  for(const i of S.marks){const k=sqName(i);out[i]=S.graded&&S.graded.found.has(k)?'found':S.graded&&S.graded.wrong.has(k)?'wrong':'mine';}
-  if(done)for(const a of S.answers)if(!out[a.sq])out[a.sq]='missed';
-  return out;
-}
 function render(){
-  const hang=hangMode(), mine=S.mode==='mine', a=side(S.attacker), finding=S.phase==='find', you=side(S.turn), them=side(S.turn==='w'?'b':'w');
+  const mine=S.mode==='mine', a=side(S.attacker), finding=S.phase==='find', you=side(S.turn);
   // task card
   $('turn-dot').className='turn-dot '+S.turn;$('turn-label').textContent=you+' to move';
   for(const b of $('stepper').children){
@@ -490,37 +449,34 @@ function render(){
     b.className=r?'done'+(r.firstTry?'':' slip'):'';b.firstElementChild.textContent=r?'✓':steps().indexOf(m)+1;
   }
   const what=P.checks?'captures and checks':'captures';
-  $('task').innerHTML=hang?'Tap every <b>hanging piece</b>, theirs and yours.'
-    :mine?'Find your '+what+' that <b>work</b>.':'Find '+a+'’s <b>real threats</b>: '+what+' that would hurt you.';
+  $('task').innerHTML=mine?'Find your '+what+' that <b>work</b>.':'Find '+a+'’s <b>real threats</b>: '+what+' that would hurt you.';
   $('meta').innerHTML=finding?'Last move <b>'+S.last.label+'</b>'
     :'From '+(/ vs /.test(GAMES[S.gi][0])?'':'the opening line ')+'<b>'+esc(GAMES[S.gi][0])+'</b>, after '+S.last.label;
   // board
-  const graded=S.phase==='done'||S.graded, rings=ringKinds(), focusSq=hang&&S.focus?idx(S.focus):null;
+  const graded=S.phase==='done'||S.graded;
   for(let d=0;d<64;d++){
     const i=S.flipped?63-d:d, el=sqEls[d], r=Math.floor(i/8), f=i%8, pc=S.board[i];
     el.dataset.i=i;
-    el.className='sq'+(((r+f)%2)?' dk':'')+((i===S.last.from||i===S.last.to)?' hl':'')+(S.sel===i?' sel':'')+(finding&&(hang?markable(i):own(i))?' own':'');
+    el.className='sq'+(((r+f)%2)?' dk':'')+((i===S.last.from||i===S.last.to)?' hl':'')+(S.sel===i?' sel':'')+(finding&&own(i)?' own':'');
     const wave=(S.anim==='correct')&&pc;
     let html=pc?'<div class="pc '+pc+(wave?' wave':'')+'"'+(wave?' style="animation-delay:'+((Math.floor(d/8)+d%8)*18)+'ms"':'')+'></div>':'';
-    if(rings[i])html+='<i class="ring '+rings[i]+(S.fresh===i?' new':'')+(focusSq!=null&&focusSq!==i?' dim':'')+'"></i>';
     if(d%8===0)html+='<span class="co r">'+(8-r)+'</span>';
     if(d>=56)html+='<span class="co f">'+FILES[f]+'</span>';
-    el.innerHTML=html;el.setAttribute('aria-label',FILES[f]+(8-r)+(pc?' '+pc:'')+(rings[i]?' marked':''));
+    el.innerHTML=html;el.setAttribute('aria-label',FILES[f]+(8-r)+(pc?' '+pc:''));
   }
-  S.fresh=null;
   boardEl.classList.toggle('drawing',finding);
   boardEl.classList.toggle('solved',S.phase==='done'&&S.perfect);
   // board bar
   const tag=$('view-tag');tag.className='view-tag';
-  if(finding)tag.textContent=hang?'Your marks':'Your arrows';
+  if(finding)tag.textContent='Your arrows';
   else{tag.textContent=S.perfect?'All found':'Answer';tag.classList.add(S.perfect?'good':'bad');}
   const cnt=$('arrow-count');cnt.hidden=!finding;
   if(finding){const n=picks().length, T=targets(), t=T?T.length:null, show=P.showTotal&&t!=null;
-    cnt.textContent=(hang?'Marked ':'Arrows ')+n+(P.showTotal?' / '+(t==null?'…':t):'');
+    cnt.textContent='Arrows '+n+(P.showTotal?' / '+(t==null?'…':t):'');
     cnt.className='count-pill'+(show&&n===t?' full':show&&n>t?' over':'');
     cnt.title=!P.showTotal?'Turn on “Show how many there are” in Settings to see the total':t==null?'Waiting for Stockfish':'There '+(t===1?'is 1':'are '+t)+' to find';}
   $('btn-undo').disabled=!finding||!S.history.length;$('btn-clear').disabled=!finding||!picks().length;
-  $('legend').hidden=!graded;$('legend-wrong').textContent=hang?'Not hanging':'Wrong';$('legend-extra').hidden=hang;
+  $('legend').hidden=!graded;
   // stats
   const st=stats();
   $('st-done').textContent=st.done;$('st-perfect').textContent=st.done?Math.round(100*st.perfect/st.done)+'%':'–';
@@ -539,11 +495,7 @@ function arrowSvg(f,t,kind,op,wide){
 }
 function renderArrows(){
   let list;
-  if(hangMode()){
-    // once answered, each hanging piece shows the capture that wins it
-    const mk=new Set(S.marks.map(sqName));
-    list=S.phase==='done'?S.answers.map(a=>({f:a.from,t:a.to,k:a.key,kind:mk.has(a.key)?'found':'missed'})):[];
-  }else if(S.phase==='done'){
+  if(S.phase==='done'){
     // the ones to find (found or missed), plus the player's optional and wrong arrows
     const drawn=new Set(S.arrows.map(akey));
     list=targets().map(a=>({f:a.from,t:a.to,k:a.key,kind:drawn.has(a.key)?'found':'missed'}))
@@ -572,35 +524,33 @@ const howto=html=>'<details class="howto"'+(helpOpen?' open':'')+'><summary>How 
 fbEl.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('.howto'))helpOpen=e.target.open;},true);
 function renderFeedback(){
   const el=fbEl;el.className='feedback';let h='', act='';
-  const hang=hangMode(), T=targets(), n=T?T.length:0, a=side(S.attacker), r=S.result, st=stats(), plural=(k,w)=>k+' '+w+(k===1?'':'s');
-  const unit=k=>hang?plural(k,'hanging piece'):S.mode==='mine'?(k===1?'1 attack that works':k+' attacks that work'):plural(k,'real threat');
+  const mine=S.mode==='mine', T=targets(), n=T?T.length:0, a=side(S.attacker), r=S.result, st=stats(), plural=(k,w)=>k+' '+w+(k===1?'':'s');
+  const unit=k=>mine?(k===1?'1 attack that works':k+' attacks that work'):plural(k,'real threat');
   const what=P.checks?'capture or check':'capture', noEngine=Engine.state==='error';
   if(S.phase==='find'){
     if(!S.attempts){
-      h=hang?'<h3>'+STEPS.hanging+'</h3><p>A piece <b>hangs</b> when taking it wins material: nothing defends it, or something cheaper attacks it. Tap every hanging piece, yours or theirs, then check.</p>'+
-          howto('<p>Tap a piece again to unmark it. Only legal captures count, so a piece pinned to its king can’t take or take back. Sometimes nothing hangs: then check with nothing marked.</p>')
-        :'<h3>'+STEPS[S.mode]+'</h3>'+(S.mode==='mine'
-          ?'<p>Draw an arrow for every '+what+' you have that <b>works</b>'+(noEngine?': it wins material.':': Stockfish rates it within a pawn of its best move.')+' Leave out the ones that lose.</p>'
-          :'<p>Draw an arrow for every '+what+' '+a+' could hurt you with if it were their move: a <b>real threat</b>'+(noEngine?' wins material.':' gains them at least a pawn and a half.')+' Leave out the harmless ones.</p>')+
-          howto('<p>'+(noEngine?'Stockfish isn’t available, so material decides. Captures that only trade evenly':'Borderline ones (rated '+(S.mode==='mine'?'dubious':'minor')+')')+' count either way. If none qualify, check with no arrows.</p><p>Drag from a piece to its target, or tap the piece and then the target. Draw the same arrow again to remove it.</p>')+
+      h='<h3>'+STEPS[S.mode]+'</h3>'+(mine
+          ?'<p>What can you do to them? Draw an arrow for every '+what+' of yours that <b>works</b>'+(noEngine?': it wins material.':': Stockfish rates it within a pawn of its best move.')+' Leave out the ones that lose.</p>'
+          :'<p>What could '+a+' do to you if it were their move? Draw an arrow for every '+what+' that would really hurt: a <b>real threat</b>'+(noEngine?' wins material.':' gains them at least a pawn and a half.')+' Leave out the harmless ones.</p>')+
+          howto('<p>'+(mine?'Taking a loose piece usually works, unless it is a trap.':'If they could just take one of your loose pieces, that counts.')+' '+(noEngine?'Stockfish isn’t available, so material decides. Captures that only trade evenly':'Borderline ones (rated '+(S.mode==='mine'?'dubious':'minor')+')')+' count either way. If none qualify, check with no arrows.</p><p>Drag from a piece to its target, or tap the piece and then the target. Draw the same arrow again to remove it.</p>')+
           (T?'':'<p class="hint">Stockfish is still judging this position…</p>');
     }else{
       el.classList.add('bad');
-      const wrongWhat=(r.wrong===1?'isn’t':'aren’t')+(hang?' hanging':S.mode==='mine'?' an attack that works':' a real threat');
-      h='<h3>Not yet</h3><p>'+(!r.total?(hang?'Nothing hangs here.':S.mode==='mine'?'None of your captures or checks work here.':'None of their captures or checks is a real threat.'):r.missed?'You have '+r.found+' of '+r.total+'.':'You have all '+r.total+'.')+
-        (r.wrong?' '+plural(r.wrong,hang?'piece':'arrow')+' in red '+wrongWhat+'.':'')+' Keep looking, then check again.</p>';
+      const wrongWhat=(r.wrong===1?'isn’t':'aren’t')+(mine?' an attack that works':' a real threat');
+      h='<h3>Not yet</h3><p>'+(!r.total?(mine?'None of your captures or checks work here.':'None of their captures or checks is a real threat.'):r.missed?'You have '+r.found+' of '+r.total+'.':'You have all '+r.total+'.')+
+        (r.wrong?' '+plural(r.wrong,'arrow')+' in red '+wrongWhat+'.':'')+' Keep looking, then check again.</p>';
       act='<div class="row"><button class="btn small ghost" data-a="reveal">Show all</button></div>';
     }
     act+=T?'<button class="btn primary" data-a="check">Check<span class="kbd">Enter</span></button>':'<button class="btn primary" disabled>Waiting for Stockfish…</button>';
   }else{
     if(S.perfect){
       el.classList.add('good');
-      h='<h3>'+(n?(n===1?'Found it':'All '+n+' found'):hang?'Right, nothing hangs':S.mode==='mine'?'Right, none of them work':'Right, nothing real')+(S.firstTry?'':' after '+plural(S.attempts,'check'))+'</h3>'+
+      h='<h3>'+(n?(n===1?'Found it':'All '+n+' found'):mine?'Right, none of them work':'Right, nothing real')+(S.firstTry?'':' after '+plural(S.attempts,'check'))+'</h3>'+
         '<p>'+(S.firstTry?'Right on the first check.':'Only first-check answers count toward a perfect position.')+
-        (n?' See below what Stockfish makes of '+(hang?'each capture':'them')+'.':'')+'</p>';
+        (n?' See below what Stockfish makes of them.':'')+'</p>';
     }else{
-      h='<h3>'+(n?'There '+(n===1?'was ':'were ')+unit(n):hang?'Nothing was hanging':S.mode==='mine'?'None of them worked':'Nothing was a real threat')+'</h3><p>'+(n?'You found '+r.found+' of '+n+'. ':'')+
-        (r.wrong?plural(r.wrong,hang?'piece':'arrow')+' in red '+(r.wrong===1?'wasn’t':'weren’t')+(hang?' hanging. ':S.mode==='mine'?' worth playing. ':' a real threat. '):'')+(r.missed?'Missed ones are dashed.':'')+'</p>';
+      h='<h3>'+(n?'There '+(n===1?'was ':'were ')+unit(n):mine?'None of them worked':'Nothing was a real threat')+'</h3><p>'+(n?'You found '+r.found+' of '+n+'. ':'')+
+        (r.wrong?plural(r.wrong,'arrow')+' in red '+(r.wrong===1?'wasn’t':'weren’t')+(mine?' worth playing. ':' a real threat. '):'')+(r.missed?'Missed ones are dashed.':'')+'</p>';
     }
     const nx=nextStep();
     if(nx)act='<div class="row split"><button class="btn small ghost" data-a="next" title="Leave this position and start a new one">New position</button>'+
@@ -628,51 +578,38 @@ function rowHtml(key,st,san,kind,l,v,mover){
 }
 function renderReview(){
   const card=$('review');card.hidden=S.phase!=='done';if(card.hidden)return;
-  const hang=hangMode(), ev=currentEval(), ready=ev&&ev.done, you=side(S.turn), them=side(S.turn==='w'?'b':'w');
+  const mine=S.mode==='mine', ev=currentEval(), ready=ev&&ev.done;
   const chosen=new Set(picks());
-  $('review-title').textContent=(hang?'Hanging':S.mode==='mine'?'Attacks':'Threats')+' · '+S.answers.length;
+  $('review-title').textContent=(mine?'Your moves':'Their moves')+' · '+S.answers.length;
   $('review-depth').textContent=Engine.state==='error'?'No engine':ready?'Stockfish · depth '+DEPTH:'Stockfish thinking…';
   // engine's free choice for the side it is judging
-  const tm=$('top-move'), G0=ready?ev.groups[S.afen]:null;
+  const tm=$('top-move'), G0=ready?ev:null;
   if(G0&&G0.best){
     const isAns=S.answers.some(x=>x.afen===S.afen&&x.uci.slice(0,4)===G0.best.move.slice(0,4));
     tm.innerHTML='Stockfish’s choice for '+side(S.attacker)+': <b>'+esc(sanOf(S.afen,G0.best.move))+'</b> ('+fmtEval(G0.best,S.attacker)+')'+
-      (isAns?(hang?', winning a hanging piece.':', one of the attacks.'):hang?', not one of these captures.':', a quiet move, not an attack.');
+      (isAns?', one of these.':', a quiet move, not a capture or check.');
     tm.hidden=false;
   }else tm.hidden=true;
   let h='';
-  if(hang){
-    for(const grp of ['chance','danger']){
-      const rows=S.answers.filter(x=>x.side===grp);if(!rows.length)continue;
-      h+='<p class="atk-group">'+(grp==='chance'?'You can win':'You can lose')+'</p>';
-      for(const x of rows){
-        const l=lineOf(x,ev);
-        h+=rowHtml(x.key,chosen.has(x.key)?'found':'missed',x.san,(grp==='chance'?'their ':'your ')+PIECE[x.victim]+' on '+x.key,l,l&&verdictHanging(x,l,ev),moverOf(x.afen));
-      }
-    }
-    const wrong=S.marks.filter(i=>S.graded.wrong.has(sqName(i)));
-    if(wrong.length)h+='<p class="atk-group">Not hanging</p>';
-    for(const i of wrong){const pc=S.board[i];
-      h+=rowHtml(sqName(i),'wrong',PIECE[pc[1]]+' '+sqName(i),whyNotHanging(i),null,null,null);}
-  }else{
+  {
     // every capture and check, best first, with what it was judged and how the player's arrows fared
     const t=tiers()||{}, rows=S.answers.map(x=>({x,l:lineOf(x,ev)}));
     if(ready)rows.sort((p,q)=>(q.l?q.l.cp:-1e9)-(p.l?p.l.cp:-1e9));
     h=rows.map(({x,l})=>{const tr=t[x.key], drawn=chosen.has(x.key);
       const st=tr==='need'?(drawn?'found':'missed'):drawn?(tr==='ok'?'extra':'wrong'):'skip';
-      return rowHtml(x.key,st,x.san,x.cap&&x.chk?'capture, check':x.cap?'capture':'check',l,tr&&tierLabel(tr),S.attacker);}).join('');
+      const kind=x.loose?(mine?'their':'your')+' loose '+PIECE[x.victim]+(x.chk?', check':''):x.cap&&x.chk?'capture, check':x.cap?'capture':'check';
+      return rowHtml(x.key,st,x.san,kind,l,tr&&tierLabel(tr),S.attacker);}).join('');
     const legal=new Set(new Chess(S.afen).moves({verbose:true}).map(m=>m.from+m.to));
     for(const w of S.arrows.filter(x=>S.graded.wrong.has(akey(x)))){const k=akey(w);
       h+=rowHtml(k,'wrong',sqName(w.f)+'→'+sqName(w.t),legal.has(k)?'legal, but not a '+(P.checks?'capture or check':'capture'):'not a legal move',null,null,null);}
   }
-  $('atk-list').innerHTML=h||'<p class="top-move">'+(hang?'Nothing hangs on either side. Every piece that can be taken is defended well enough.':'No captures'+(P.checks?' or checks':'')+' at all here.')+'</p>';
+  $('atk-list').innerHTML=h||'<p class="top-move">No captures'+(P.checks?' or checks':'')+' at all here.</p>';
   // the focused capture's engine line
   const pv=$('pv'), f=S.focus&&S.answers.find(x=>x.key===S.focus), fl=f?lineOf(f,ev):null;
   pv.hidden=!S.answers.length;
   if(fl)pv.innerHTML='<b>'+esc(f.san)+'</b> '+fmtEval(fl,moverOf(f.afen))+' · <span class="line">'+esc(pvText(f.afen,fl.pv,10))+'</span>';
   else if(f)pv.textContent=Engine.state==='error'?'The engine is unavailable, so there is no line to show.':'Waiting for Stockfish…';
-  else pv.textContent=hang?'Tap a row to see the capture on the board with Stockfish’s line. For your pieces, it plays as if it were '+them+'’s move.'
-    :'Tap a row to see it on the board with Stockfish’s line. '+(S.mode==='theirs'?'Evaluations assume it is '+side(S.attacker)+'’s move.':'');
+  else pv.textContent='Tap a row to see it on the board with Stockfish’s line. '+(mine?'':'Evaluations assume it is '+side(S.attacker)+'’s move.');
 }
 $('atk-list').addEventListener('click',e=>{
   const b=e.target.closest('.atk');if(!b)return;
@@ -710,7 +647,7 @@ function playAnim(){
     // the streak shows when a perfect round closes
     const k=stats().streak, closed=S.closing&&steps().every(m=>S.results[m].firstTry);S.closing=false;
     if(closed&&k>=3&&k%3===0)confetti();
-    if(S.firstTry)stamp(S.answers.length?any(['Danger spotted!','Eagle eye!','Nothing hidden!','All seen!']):any(['All safe!','Nothing hangs!','None at all!']),closed&&k>1?k+' perfect in a row':null);
+    if(S.firstTry)stamp(targets().length?any(['Danger spotted!','Eagle eye!','Nothing hidden!','All seen!']):any(['All safe!','Nothing there!','None at all!']),closed&&k>1?k+' perfect in a row':null);
     else stamp(any(['Got them all!','There they are!']));
   }else if(a==='wrong'){
     restart(shell,'flash-bad');restart(boardEl,'shake');restart(fbEl,'shake');
@@ -718,9 +655,8 @@ function playAnim(){
   }
 }
 
-/* ---------- pointer: marks and arrows ---------- */
-/* Hanging pieces: a left click marks or unmarks a piece. Attack drills: drag (left or right button) from one of the
-   attacker's pieces to a target; a plain left click selects / targets instead. */
+/* ---------- pointer: draw arrows ---------- */
+/* Drag (left or right button) from one of the attacker's pieces to a target; a plain left click selects / targets instead. */
 let drag=null;
 function squareAt(x,y){
   const r=boardEl.getBoundingClientRect();
@@ -761,9 +697,8 @@ $('stepper').addEventListener('click',e=>{
 });
 $('btn-undo').onclick=undo;$('btn-clear').onclick=clearPicks;
 $('btn-flip').onclick=()=>{S.flipped=!S.flipped;render();};
-$('opt-checks').checked=!!P.checks;$('opt-total').checked=!!P.showTotal;$('opt-only').checked=!!P.only;
+$('opt-checks').checked=!!P.checks;$('opt-total').checked=!!P.showTotal;
 $('opt-checks').onchange=e=>{P.checks=e.target.checked;newPosition();};
-$('opt-only').onchange=e=>{P.only=e.target.checked;newPosition();};
 $('opt-total').onchange=e=>{P.showTotal=e.target.checked;save();render();};
 const setBtn=$('btn-settings'),setPanel=$('settings-panel');
 function toggleSettings(open){setPanel.hidden=!open;setBtn.setAttribute('aria-expanded',open?'true':'false');}
