@@ -222,12 +222,14 @@ function hangingIn(fen){
 }
 /* Positions are drawn uniformly over every eligible ply of every game, skipping games seen recently, with the side to
    move not in check, and not right after a capture (where the answer is usually just to take back). Each step may have
-   no more than a dozen captures and checks to judge. Most positions have 1–4 loose pieces, so at least one step is
-   likely to have something to find; about one in five has none, so "nothing here" stays a real answer. */
+   no more than a dozen captures and checks to judge. Loose pieces steer the mix: positions come right after the
+   opponent's move, which more often leaves your pieces loose than theirs, so the picker asks for one of theirs (a
+   likely chance) as often as one of yours (a likely danger); about one in five has none at all, so "nothing here"
+   stays a real answer. */
 function pick(){
   const w=[];let total=0;
   for(let gi=0;gi<GAMES.length;gi++){total+=Math.max(0,Math.min(LENS[gi],MAX_PLY)-MIN_PLY+1);w.push(total);}
-  const recent=new Set(P.recent), wantSafe=Math.random()<SAFE_SHARE;let fallback=null;
+  const recent=new Set(P.recent), r0=Math.random(), want=r0<SAFE_SHARE?'none':r0<(1+SAFE_SHARE)/2?'chance':'danger';let fallback=null;
   for(let tries=0;tries<300;tries++){
     const x=Math.floor(Math.random()*total);let a=0,b=w.length-1;
     while(a<b){const mid=(a+b)>>1;if(w[mid]>x)b=mid;else a=mid+1;}
@@ -243,7 +245,7 @@ function pick(){
     }
     const cand=Object.assign({gi,ply,answers},r), n=loose.length;
     const fits=steps().every(m=>answers[m].length<=MAX_ATTACKS);
-    if(fits&&(wantSafe?n===0:n>=1&&n<=MAX_HANGING)){fallback=cand;break;}
+    if(fits&&(want==='none'?n===0:n<=MAX_HANGING&&loose.some(h=>h.side===want))){fallback=cand;break;}
     if(!fallback)fallback=cand;
   }
   if(!fallback)return pick();
@@ -457,6 +459,12 @@ function check(){
     else{S.anim='wrong';render();}
   });
 }
+/* "No danger" / "No chances": the answer is that there is nothing to find, so check with no arrows (undo brings them back). */
+function claimNone(){
+  if(S.phase!=='find'||!targets())return;
+  if(S.arrows.length){snapshot();S.arrows=[];}
+  check();
+}
 function reveal(){if(S.phase!=='find'||!targets())return;judgeThen(()=>{S.sel=null;grade();finish(false);});}
 /* A round counts once every step is answered; it is perfect when each step was right on the first check. */
 function finish(perfect){
@@ -592,7 +600,7 @@ function renderFeedback(){
           :'<p>What could '+a+' do to you if it were their move? Draw an arrow for every '+what+' that would really hurt: a <b>real threat</b>'+(noEngine?' wins material.':' gains them at least a pawn and a half.')+' Leave out the harmless ones.</p>')+
           howto((mine&&!noEngine?'<p>You have a win when Stockfish’s best move leaves you two pawns up. Then one winning move is enough: one that also leaves you two pawns up and is within a pawn of the best (or, when the best move wins a lot, wins at least half as much). Without a win, draw every capture or check Stockfish rates within a pawn of its best move. Moves that still leave you winning are never wrong. Taking a loose piece usually works, unless it is a trap.</p>'
             :'<p>'+(mine?'Taking a loose piece usually works, unless it is a trap.':'If they could just take one of your loose pieces, that counts.')+'</p>')+
-            '<p>'+(noEngine?'Stockfish isn’t available, so material decides. Captures that only trade evenly':'Borderline ones (rated '+(mine?'dubious':'minor')+')')+' count either way. If nothing qualifies, check with no arrows.</p><p>Drag from a piece to its target, or tap the piece and then the target. Draw the same arrow again to remove it.</p>')+
+            '<p>'+(noEngine?'Stockfish isn’t available, so material decides. Captures that only trade evenly':'Borderline ones (rated '+(mine?'dubious':'minor')+')')+' count either way. If nothing qualifies, press '+(mine?'No chances':'No danger')+'.</p><p>Drag from a piece to its target, or tap the piece and then the target. Draw the same arrow again to remove it.</p>')+
           (T?'':'<p class="hint">Stockfish is still judging this position…</p>');
     }else{
       el.classList.add('bad');
@@ -601,7 +609,8 @@ function renderFeedback(){
         (r.wrong?' '+plural(r.wrong,'arrow')+' in red '+wrongWhat+'.':'')+' Keep looking, then check again.</p>';
       act='<div class="row"><button class="btn small ghost" data-a="reveal">Show all</button></div>';
     }
-    act+=!T?'<button class="btn primary" disabled>Waiting for Stockfish…</button>':S.judging?'<button class="btn primary" disabled>Stockfish is judging your moves…</button>':'<button class="btn primary" data-a="check">Check<span class="kbd">Enter</span></button>';
+    const none='<button class="btn" data-a="none"'+(T&&!S.judging?'':' disabled')+' title="Check with no arrows">'+(mine?'No chances':'No danger')+'</button>';
+    act+='<div class="row split">'+none+(!T?'<button class="btn primary" disabled>Waiting for Stockfish…</button>':S.judging?'<button class="btn primary" disabled>Judging your moves…</button>':'<button class="btn primary" data-a="check">Check<span class="kbd">Enter</span></button>')+'</div>';
   }else{
     if(S.perfect){
       el.classList.add('good');
@@ -625,7 +634,7 @@ function renderFeedback(){
 }
 fbEl.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;
-  ({check,reveal,next:newPosition,step:()=>enterStep(b.dataset.m)})[b.dataset.a]();
+  ({check,reveal,none:claimNone,next:newPosition,step:()=>enterStep(b.dataset.m)})[b.dataset.a]();
 });
 
 const ST={found:['✓','You found it'],missed:['!','Missed'],wrong:['✕','Not right'],extra:['✓','Fine either way'],skip:['','Rightly left out'],alt:['','Also wins; one was enough']};
