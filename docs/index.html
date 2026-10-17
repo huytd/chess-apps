@@ -117,6 +117,7 @@ a:hover{text-decoration-color:currentColor}
 .board-bar:first-child{margin-bottom:8px}
 @media (max-width:560px){.board-bar:first-child{flex-wrap:nowrap}.board-bar:first-child .row{flex-wrap:nowrap;gap:2px}.board-bar .btn.small{padding:6px 8px}.view-tag{font-size:15px;white-space:nowrap}}
 .board-bar:last-child{margin-top:8px}
+.board-bar:has(> .legend[hidden]){display:none}
 .view-tag{font-family:var(--f-display);font-size:16px;font-weight:700;color:var(--ink);letter-spacing:-.005em}
 .count-pill{font-family:var(--f-mono);font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-variant-numeric:tabular-nums;cursor:help}
 .count-pill.full{background:var(--good-solid);border-color:var(--good-solid);color:var(--on-solid)}
@@ -138,6 +139,8 @@ a:hover{text-decoration-color:currentColor}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .row.split{justify-content:space-between}
 .kbd{font-family:var(--f-mono);font-size:10.5px;font-weight:600;opacity:.6;border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-left:6px}
+@media (hover:none){.kbd{display:none}} /* touch screens have no Enter key to hint at */
+.row.split > .btn.primary{flex:1 1 auto}
 
 /* feedback: the panel's main message. Plain on start; tinted with a rule on the left once there is a verdict. */
 .feedback{display:flex;flex-direction:column;gap:12px;padding:16px 0 0}
@@ -148,7 +151,15 @@ a:hover{text-decoration-color:currentColor}
 .feedback.good h3{color:var(--good)} .feedback.bad h3{color:var(--bad)}
 .feedback p{margin:0;font-size:14.5px;color:var(--ink)}
 .feedback .hint{color:var(--muted);font-size:13px}
-.feedback > .btn.primary{width:100%;margin-top:2px}
+.feedback .actions{display:flex;flex-direction:column;gap:10px}
+.feedback .actions > .btn.primary{width:100%;margin-top:2px}
+.howto{font-size:13px;color:var(--muted)}
+.howto summary{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-weight:600;list-style:none;padding:2px 0}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::before{content:"";width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+.howto[open] summary::before{transform:rotate(45deg)}
+.howto summary:hover{color:var(--ink)}
+.howto p{margin:6px 0 0;font-size:13px;color:var(--muted)}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:auto -20px 0;border-top:1px solid var(--line)}
 .stat{display:flex;flex-direction:column;gap:1px;padding:13px 20px 15px}
 .stat + .stat{border-left:1px solid var(--line)}
@@ -209,8 +220,21 @@ a:hover{text-decoration-color:currentColor}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 @keyframes pop{0%{transform:translateY(3px);opacity:.5}100%{transform:none;opacity:1}}
 .feedback{animation:pop .2s ease-out}
+/* Phones: the action sits right under the board, then the message, then the stats; extras (review, tray) after. */
+@media (max-width:860px){
+  .feedback{padding-top:0}
+  .feedback .actions{order:-1}
+  .feedback.good,.feedback.bad{margin-top:0}
+  .side{padding-bottom:18px}
+  .side > .stats{order:1;margin:0 -20px;border-bottom:1px solid var(--line)}
+  .side > .card{order:2}
+}
 @media (max-width:560px){
-  .brand h1{font-size:20px}
+  .top{flex-wrap:nowrap;padding-bottom:10px}
+  .brand h1{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .top-right{flex-wrap:nowrap;gap:14px}
+  .tools{gap:16px;flex-wrap:nowrap}
+  .tool-tab{white-space:nowrap}
   .icon-btn .lbl{display:none}
   .icon-btn{padding:0 10px}
 }
@@ -596,22 +620,26 @@ function playAnim(){
   }else if(a==='wrong'){restart(shell,'flash-bad');restart(boardEl,'shake');restart(fbEl,'shake');
     const n=S.diff?S.diff.length:0;stamp(any(n<=2?['So close ?!','Almost ?!']:['Not quite ?!','Dubious ?!','Look again ?']),n+' square'+(n===1?'':'s')+' off',true);}
 }
+/* Tips live in a "How it works" fold whose open state survives re-renders. */
+let helpOpen=false;
+const howto=html=>'<details class="howto"'+(helpOpen?' open':'')+'><summary>How it works</summary>'+html+'</details>';
+fbEl.addEventListener('toggle',e=>{if(e.target.matches&&e.target.matches('.howto'))helpOpen=e.target.open;},true);
 function renderFeedback(){
-  const el=fbEl;el.className='feedback';let h='';
+  const el=fbEl;el.className='feedback';let h='', act='';
   const replayBar=()=>S.replay==null?'<button class="btn" data-a="replay">Replay the moves</button>':
     '<div class="replay"><button class="btn small" data-a="r-first" aria-label="To start">⏮</button><button class="btn small" data-a="r-prev" aria-label="Previous move">◀</button><span class="count">'+S.replay+' / '+S.len+'</span><button class="btn small" data-a="r-next" aria-label="Next move">▶</button><button class="btn small" data-a="r-last" aria-label="To end">⏭</button><button class="btn small ghost" data-a="r-done">Done</button></div>';
   if(S.phase==='arrange'){
     if(!S.attempts){
       h='<h3>Play it in your head</h3><p>Read the moves, picture each one, then set up the board as it stands after the last move. The moves are hidden once you touch the board, so memorize them first. '+(P.autoCheck?'It checks itself once you have made '+S.expected+' move'+(S.expected===1?'':'s')+' on the board.':'Check when you are done.')+'</p>'+
-        '<p class="hint">Drag a piece to move it. Drop it on another piece to capture. Drag it off the board to remove it. You can also tap a piece, then tap a square.</p>'+
-        '<p class="hint">Right-click a square to highlight it, or right-drag to draw an arrow (hold Shift, Alt or both for other colors). Left-click the board to clear them.</p>';
+        howto('<p>Drag a piece to move it. Drop it on another piece to capture. Drag it off the board to remove it. You can also tap a piece, then tap a square.</p>'+
+        '<p>Right-click a square to highlight it, or right-drag to draw an arrow (hold Shift, Alt or both for other colors). Left-click the board to clear them.</p>');
     }else{
       el.classList.add('bad');
       const n=S.diff?S.diff.length:0;
-      h='<h3>Not quite</h3><p>'+n+' square'+(n===1?' doesn’t':'s don’t')+' match the final position. Adjust the board and check again.</p>'+
-        '<div class="row"><button class="btn small" data-a="mark">Show wrong squares</button><button class="btn small ghost" data-a="reveal">Show answer</button></div>';
+      h='<h3>Not quite</h3><p>'+n+' square'+(n===1?' doesn’t':'s don’t')+' match the final position. Adjust the board and check again.</p>';
+      act='<div class="row"><button class="btn small" data-a="mark">Show wrong squares</button><button class="btn small ghost" data-a="reveal">Show answer</button></div>';
     }
-    h+='<button class="btn primary" data-a="check">Check position<span class="kbd">Enter</span></button>';
+    act+='<button class="btn primary" data-a="check">Check position<span class="kbd">Enter</span></button>';
   }else if(S.phase==='solved'){
     el.classList.add('good');
     h='<h3>'+(S.firstTry?'Correct on the first check':'Correct after '+S.attempts+' checks')+'</h3>';
@@ -622,13 +650,13 @@ function renderFeedback(){
     let nb='<button class="btn primary" data-a="next">Next line<span class="kbd">Enter</span></button>';
     if(S.nextAt&&S.replay==null){const left=Math.max(0,S.nextAt-Date.now());
       nb='<div class="row"><button class="stay" data-a="stay">Stay</button><button class="btn primary counting" data-a="next" style="--dur:'+S.nextDur+'ms;--delay:-'+(S.nextDur-left)+'ms">Next line<span class="kbd">Enter</span></button></div>';}
-    h+='<div class="row split">'+replayBar()+nb+'</div>';
+    act='<div class="row split">'+replayBar()+nb+'</div>';
   }else{
     h='<h3>The final position</h3><p>Squares outlined in red are the ones your board had wrong ('+S.diff.length+'). Step through the moves to see where the picture slipped.</p>'+
-      '<div class="row"><button class="btn small" data-a="v-answer" aria-pressed="'+(S.view==='answer')+'">Answer</button><button class="btn small" data-a="v-mine" aria-pressed="'+(S.view==='mine')+'">My board</button></div>'+
-      '<div class="row split">'+replayBar()+'<button class="btn primary" data-a="next">Next line<span class="kbd">Enter</span></button></div>';
+      '<div class="row"><button class="btn small" data-a="v-answer" aria-pressed="'+(S.view==='answer')+'">Answer</button><button class="btn small" data-a="v-mine" aria-pressed="'+(S.view==='mine')+'">My board</button></div>';
+    act='<div class="row split">'+replayBar()+'<button class="btn primary" data-a="next">Next line<span class="kbd">Enter</span></button></div>';
   }
-  el.innerHTML=h;
+  el.innerHTML=h+'<div class="actions">'+act+'</div>';
 }
 fbEl.addEventListener('click',e=>{
   const b=e.target.closest('[data-a]');if(!b)return;
