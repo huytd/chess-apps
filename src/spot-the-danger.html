@@ -258,7 +258,8 @@ const Engine=(function(){
   let w=null, job=null, timer=null;const queue=[];
   const E={state:'loading',onState:null,run(j){queue.push(j);next();},
     cancel(){queue.length=0;if(job&&!job.cancelled){job.cancelled=true;w.postMessage('stop');}}};
-  function set(s){E.state=s;if(E.onState)E.onState();}
+  // a failing listener must not stall the queue, so state updates and results are reported in try/finally
+  function set(s){E.state=s;if(E.onState)try{E.onState();}catch(e){setTimeout(()=>{throw e;});}}
   function fail(){clearTimeout(timer);if(w)try{w.terminate();}catch(e){}w=null;job=null;queue.length=0;set('error');}
   function next(){
     if(job||!w||E.state==='loading'||E.state==='error')return;
@@ -277,8 +278,8 @@ const Engine=(function(){
       job.lines[+at('multipv')||1]={move:pv[0],pv,depth:+at('depth'),mate:kind==='mate'?v:null,cp:kind==='mate'?(v>0?100000-v:-100000-v):v};
     }else if(line.startsWith('bestmove')){
       const j=job;job=null;
-      if(!j.cancelled)j.done(Object.keys(j.lines).sort((a,b)=>a-b).map(k=>j.lines[k]));
-      next();
+      try{if(!j.cancelled)j.done(Object.keys(j.lines).sort((a,b)=>a-b).map(k=>j.lines[k]));}
+      finally{next();}
     }
   }
   try{
@@ -304,8 +305,9 @@ function newPosition(){
   const p=pick();
   Object.assign(S,{gi:p.gi,ply:p.ply,fen:p.fen,last:p.last,board:parse(p.fen),turn:p.fen.split(' ')[1],evals:{},answersBy:p.answers,saved:{},results:{},roundDone:false,mode:null});
   S.flipped=S.turn==='b';
-  analyse();
+  // show the new position before analysing it: the engine's status updates render the current step
   save();enterStep(steps()[0]);
+  analyse();
 }
 function enterStep(mode){
   if(S.mode){const o={};for(const f of STEP_FIELDS)o[f]=S[f];S.saved[S.mode]=o;}
@@ -383,9 +385,10 @@ const lineByKey=(ev,k)=>ev.moves[k]||ev.extra[k]||(ev.best&&ev.best.move.slice(0
    you (minus the opponent's best in the dangers step's position), and each move's tier. */
 function mineJudge(){
   const ev=S.evals[evalKey('mine')], R=S.evals[evalKey('theirs')];
-  if(Engine.state==='error'||!ev||!ev.done||!R||!R.best)return null;
+  if(Engine.state==='error'||!ev||!ev.done||!R||!(R.best||R.done))return null;
   let base=ev.best?clampCp(ev.best.cp):-Infinity;for(const k in ev.moves)base=Math.max(base,clampCp(ev.moves[k].cp));
-  const pass=-clampCp(R.best.cp), win=base>=200, slack=Math.max(100,(base-pass)/2);
+  // with no moves for the opponent there's nothing to compare passing with, so the slack stays a pawn
+  const pass=R.best?-clampCp(R.best.cp):base, win=base>=200, slack=Math.max(100,(base-pass)/2);
   return {ev,base,win,tier:k=>{
     const l=lineByKey(ev,k);if(!l)return null;
     const v=clampCp(l.cp), d=base-v;
@@ -552,7 +555,7 @@ function renderArrows(){
     // the ones to find (found or missed), plus the player's optional and wrong arrows
     const drawn=new Set(S.arrows.map(akey));
     const enough=oneOf()&&S.result.found>0;
-    list=targets().filter(a=>drawn.has(a.key)||!enough).map(a=>({f:a.from,t:a.to,k:a.key,kind:drawn.has(a.key)?'found':'missed'}))
+    list=(targets()||[]).filter(a=>drawn.has(a.key)||!enough).map(a=>({f:a.from,t:a.to,k:a.key,kind:drawn.has(a.key)?'found':'missed'}))
       .concat(S.arrows.filter(a=>!S.graded.found.has(akey(a))).map(a=>({f:a.f,t:a.t,k:akey(a),kind:S.graded.wrong.has(akey(a))?'wrong':'mine'})));
   }else list=S.arrows.map(a=>{const k=akey(a);return {f:a.f,t:a.t,k,kind:S.graded&&S.graded.found.has(k)?'found':S.graded&&S.graded.wrong.has(k)?'wrong':'mine'};});
   // the focused arrow is drawn last, on top, and the rest fade back
@@ -652,7 +655,7 @@ function renderReview(){
   {
     // every capture and check (and, in Chances, Stockfish's quiet choice and judged quiet moves), best first, with
     // what each was judged and how the player's arrows fared
-    const t=tiers()||{}, need=new Set(targets().map(x=>x.key)), win=oneOf(), enough=win&&S.result.found>0;
+    const t=tiers()||{}, need=new Set((targets()||[]).map(x=>x.key)), win=oneOf(), enough=win&&S.result.found>0;
     const tierOf=k=>J?J.tier(k):t[k], rows=list.map(x=>({x,l:lineOf(x,ev)}));
     if(ready)rows.sort((p,q)=>(q.l?q.l.cp:-1e9)-(p.l?p.l.cp:-1e9));
     h=rows.map(({x,l})=>{const tr=tierOf(x.key), drawn=chosen.has(x.key);
