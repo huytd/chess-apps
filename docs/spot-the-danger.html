@@ -393,6 +393,7 @@ const sqName=k=>FILES[k%8]+(8-Math.floor(k/8));
 function parse(fen){const b=new Array(64).fill(null);let i=0;for(const ch of fen.split(' ')[0]){if(ch==='/')continue;if(ch>='1'&&ch<='8'){i+=+ch;continue;}b[i++]=(ch===ch.toUpperCase()?'w':'b')+ch.toLowerCase();}return b;}
 const side=c=>c==='w'?'White':'Black';
 const PIECE={p:'pawn',n:'knight',b:'bishop',r:'rook',q:'queen',k:'king'};
+const nth=n=>n+(n%100>10&&n%100<14?'th':['th','st','nd','rd'][n%10]||'th');
 function moveLabel(p){const n=Math.floor(p/2)+1;return p%2===0?n+'.':n+'…';}
 
 /* ---------- positions ---------- */
@@ -613,8 +614,7 @@ function toggleArrow(f,t){
   if(S.phase!=='find'||f===t)return;
   snapshot();
   const k=S.arrows.findIndex(a=>a.f===f&&a.t===t);
-  if(S.mode==='move')S.arrows=k>=0?[]:[{f,t}];  // one move: a new arrow replaces the old one
-  else if(k>=0)S.arrows.splice(k,1);else S.arrows.push({f,t});
+  if(k>=0)S.arrows.splice(k,1);else S.arrows.push({f,t});
   render();
 }
 function undo(){if(S.phase!=='find'||!S.history.length)return;S.arrows=S.history.pop();S.sel=null;render();}
@@ -696,13 +696,15 @@ function targets(){
   if(oneOf()){const J=mineJudge();return chanceMoves(J).filter(x=>J.tier(x.key)==='need');}
   const t=tiers();return t?S.answers.filter(a=>t[a.key]==='need'):null;
 }
-/* What to do: your one move is right if Stockfish rates it within half a pawn of its best move or, when you have a
-   win, if it keeps the win the way the chances step counts one. Without the engine any legal move counts. */
+/* What to do: you draw the moves you'd consider. Each is good if Stockfish rates it within half a pawn of its best
+   move or, when you have a win, if it keeps the win the way the chances step counts one; inaccurate (within a pawn
+   and a half) is allowed; worse is a mistake. The step passes with at least one good move and no mistakes, so
+   listing candidates is fine but drawing everything isn't. Without the engine any legal move counts. */
 const moveObj=uci=>({key:uci.slice(0,4),from:idx(uci.slice(0,2)),to:idx(uci.slice(2,4)),uci,afen:S.afen,san:sanOf(S.afen,uci)});
 function moveGrade(l){
   const J=mineJudge();if(!J||!l)return null;
   const v=clampCp(l.cp), d=J.base-v, right=d<=50||(J.win&&v>=200&&d<=J.slack);
-  return {right,tag:d<=20?['best','Best']:right?['good','Good']:d<=150?['dubious','Inaccurate']:d<=300?['bad','Mistake']:['bad','Blunder']};
+  return {right,ok:!right&&d<=150,tag:d<=20?['best','Best']:right?['good','Good']:d<=150?['dubious','Inaccurate']:d<=300?['bad','Mistake']:['bad','Blunder']};
 }
 /* How a drawn arrow counts besides being a target: 'ok' (fine either way), 'bad' or 'no' (not allowed). */
 function judged(k){
@@ -714,10 +716,14 @@ function judged(k){
 }
 function grade(){
   if(S.mode==='move'){
-    const k=S.arrows.length?akey(S.arrows[0]):null, J=mineJudge();
-    const g=k&&S.legal.has(k)&&J?moveGrade(lineByKey(J.ev,k)):null, ok=!!k&&S.legal.has(k)&&(Engine.state==='error'||!!(g&&g.right));
-    S.graded={found:new Set(ok?[k]:[]),wrong:new Set(k&&!ok?[k]:[]),extra:new Set()};
-    S.result={found:ok?1:0,wrong:k&&!ok?1:0,missed:ok?0:1,total:1};
+    const J=mineJudge(), found=[], wrong=[], extra=[];
+    for(const k of picks()){
+      if(!S.legal.has(k)){wrong.push(k);continue;}
+      const g=J?moveGrade(lineByKey(J.ev,k)):null;
+      if(Engine.state==='error'||(g&&g.right))found.push(k);else if(g&&g.ok)extra.push(k);else wrong.push(k);
+    }
+    S.graded={found:new Set(found),wrong:new Set(wrong),extra:new Set(extra)};
+    S.result={found:Math.min(1,found.length),wrong:wrong.length,missed:found.length?0:1,total:1};
     return;
   }
   const T=targets(), need=new Set(T.map(a=>a.key)), any=oneOf(), found=[], wrong=[], extra=[];
@@ -822,15 +828,15 @@ function render(){
   const tag=$('view-tag');tag.className='view-tag';
   if(finding)tag.textContent='Your arrows';
   else{tag.textContent=S.perfect?'All found':'Answer';tag.classList.add(S.perfect?'good':'bad');}
-  const cnt=$('arrow-count');cnt.hidden=!finding||S.mode==='move';
-  if(finding){const n=picks().length, T=targets(), win=oneOf(), t=T?(win?1:T.length):null, show=P.showTotal&&t!=null&&!win;
+  const cnt=$('arrow-count');cnt.hidden=!finding;
+  if(finding){const n=picks().length, T=targets(), win=oneOf()||S.mode==='move', t=T?(win?1:T.length):null, show=P.showTotal&&t!=null&&!win;
     cnt.textContent='Arrows '+n+(P.showTotal?' / '+(t==null?'…':win?'1 win':t):'');
     cnt.className='count-pill'+(show&&n===t?' full':show&&n>t?' over':'');
     cnt.title=!P.showTotal?'Turn on “Show how many there are” in Settings to see the total':t==null?'Waiting for Stockfish':win?'There is a win: one winning move is enough':'There '+(t===1?'is 1':'are '+t)+' to find';}
   $('btn-undo').disabled=!finding||!S.history.length;$('btn-clear').disabled=!finding||!picks().length;
   $('legend').hidden=!graded;
   $('legend').innerHTML=S.mode==='move'
-    ?'<span><i style="--c:var(--arrow-found)"></i>Your move (good)</span><span><i style="--c:var(--arrow-wrong)"></i>Your move (not good)</span><span><i class="dash" style="--c:var(--arrow-mine)"></i>Stockfish’s move</span>'
+    ?'<span><i style="--c:var(--arrow-found)"></i>Good</span><span><i style="--c:var(--arrow-missed)"></i>Inaccurate</span><span><i style="--c:var(--arrow-wrong)"></i>Mistake</span><span><i class="dash" style="--c:var(--arrow-mine)"></i>Stockfish’s move</span>'
     :'<span><i style="--c:var(--arrow-found)"></i>Found</span><span><i class="dash" style="--c:var(--arrow-missed)"></i>Missed</span><span><i style="--c:var(--arrow-mine)"></i>Optional</span><span><i style="--c:var(--arrow-wrong)"></i>Wrong</span>';
   // stats
   const st=stats();
@@ -840,7 +846,7 @@ function render(){
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
 
-const COLORS={mine:'var(--arrow-mine)',found:'var(--arrow-found)',wrong:'var(--arrow-wrong)',missed:'var(--arrow-missed)',engine:'var(--arrow-mine)'};
+const COLORS={mine:'var(--arrow-mine)',found:'var(--arrow-found)',wrong:'var(--arrow-wrong)',missed:'var(--arrow-missed)',engine:'var(--arrow-mine)',ok:'var(--arrow-missed)'};
 function arrowSvg(f,t,kind,op,wide){
   const pt=i=>{const d=S.flipped?63-i:i;return [d%8+.5,Math.floor(d/8)+.5];};
   const [x1,y1]=pt(f),[x2,y2]=pt(t),len=Math.hypot(x2-x1,y2-y1),ux=(x2-x1)/len,uy=(y2-y1)/len;
@@ -851,11 +857,11 @@ function arrowSvg(f,t,kind,op,wide){
 function renderArrows(){
   let list;
   if(S.phase==='done'&&S.mode==='move'){
-    // your move (green if good, red if not) and Stockfish's choice (dashed), both always shown
-    const J=mineJudge(), k=S.arrows[0]&&akey(S.arrows[0]), b=J&&J.ev.best?moveObj(J.ev.best.move):null;
+    // your moves (green good, orange inaccurate, red mistake) and Stockfish's choice (dashed) if you didn't draw it
+    const J=mineJudge(), b=J&&J.ev.best?moveObj(J.ev.best.move):null, drawn=new Set(picks());
     list=[];
-    if(b&&b.key!==k)list.push({f:b.from,t:b.to,k:b.key,kind:'engine'});
-    for(const a of S.arrows)list.push({f:a.f,t:a.t,k:akey(a),kind:S.perfect?'found':'wrong'});
+    if(b&&!drawn.has(b.key))list.push({f:b.from,t:b.to,k:b.key,kind:'engine'});
+    for(const a of S.arrows){const k=akey(a);list.push({f:a.f,t:a.t,k,kind:S.graded.found.has(k)?'found':S.graded.extra.has(k)?'ok':'wrong'});}
   }else if(S.phase==='done'){
     // the ones to find (found or missed), plus the player's optional and wrong arrows
     const drawn=new Set(S.arrows.map(akey));
@@ -892,20 +898,20 @@ function renderFeedback(){
   if(S.phase==='find'){
     if(!S.attempts){
       // what to do in this step, in one paragraph; the details fold away under "How it works"
-      const how='<p>Drag from a piece to its target, or tap the piece and then the target.'+(S.mode==='move'?' Drawing another arrow replaces it.':' Draw the same arrow again to remove it.')+'</p>';
+      const how='<p>Drag from a piece to its target, or tap the piece and then the target. Draw the same arrow again to remove it.</p>';
       if(S.mode==='theirs')h='<h3>Step 1 · Dangers</h3><p>Imagine it’s '+a+'’s move. Draw an arrow for each '+what+' they could play that would <b>really hurt you</b>. If there is none, press <b>No danger</b>.</p>'+
         howto('<p>'+(noEngine?'Stockfish isn’t available, so a capture counts if it wins material. Even trades count either way.'
           :'A real threat gains them at least a pawn and a half on Stockfish’s evaluation. Taking one of your loose pieces usually is one. Minor threats count either way; drawing a harmless one is wrong.')+'</p>'+how);
       else if(mine)h='<h3>Step 2 · Chances</h3><p>Now your side. Draw an arrow for each '+what+' of yours that <b>works</b>.'+(noEngine?'':' If you have a <b>win</b>, one winning move is enough, and it may be a quiet move.')+' If nothing works, press <b>No chances</b>.</p>'+
         howto('<p>'+(noEngine?'Stockfish isn’t available, so a capture works if it wins material. Even trades count either way.'
           :'A capture or check works if Stockfish rates it within a pawn of its best move. You have a win when its best move leaves you two pawns up; then a winning move is one that also leaves you two pawns up and is within a pawn of the best (or wins at least half as much). Dubious moves and moves that still leave you winning are never wrong.')+'</p>'+how);
-      else h='<h3>Step 3 · What to do</h3><p>Now decide. Draw <b>the one move you’d play</b>: defend, attack or a quiet move. Use what you found in the first two steps.</p>'+
-        howto('<p>'+(noEngine?'Stockfish isn’t available, so any legal move counts here.':'Stockfish judges your move against its best: within half a pawn is good, and when you have a win, any move that keeps it is good too.')+'</p>'+how);
+      else h='<h3>Step 3 · What to do</h3><p>Now decide. Draw <b>the moves you’d play</b>, whether a defence, an attack or a quiet move. You need at least one good move and no mistakes.</p>'+
+        howto('<p>'+(noEngine?'Stockfish isn’t available, so any legal move counts here.':'Stockfish judges each move against its best: within half a pawn is good, and when you have a win, any move that keeps it is good too. Inaccurate moves (up to a pawn and a half worse) are allowed; anything worse is a mistake.')+'</p>'+how);
       if(!T)h+='<p class="hint">Stockfish is still judging this position…</p>';
     }else{
       el.classList.add('bad');
-      if(S.mode==='move'){const k=S.arrows[0]&&akey(S.arrows[0]);
-        h='<h3>Not quite</h3><p>'+(k&&!S.legal.has(k)?'That isn’t a legal move.':'Stockfish has a better move.')+' Try another, then check again.</p>';}
+      if(S.mode==='move')h='<h3>Not quite</h3><p>'+(r.missed?'None of your moves is good enough yet.':'You have a good move.')+
+        (r.wrong?' '+plural(r.wrong,'arrow')+' in red '+(r.wrong===1?'is a mistake or not a legal move':'are mistakes or not legal moves')+'.':'')+' Change them, then check again.</p>';
       else{
       const wrongWhat=(r.wrong===1?'isn’t':'aren’t')+(mine?' a move that works':' a real threat');
       h='<h3>Not yet</h3><p>'+(!r.total?(mine?'None of your captures or checks work here.':'None of their captures or checks is a real threat.'):win?(r.missed?'There’s a win here.':'You have a winning move.'):r.missed?'You have '+r.found+' of '+r.total+'.':'You have all '+r.total+'.')+
@@ -914,15 +920,15 @@ function renderFeedback(){
       act='<div class="row"><button class="btn small ghost" data-a="reveal">'+(S.mode==='move'?'Show Stockfish’s move':'Show all')+'</button></div>';
     }
     const none=S.mode==='move'?'':'<button class="btn" data-a="none"'+(T&&!S.judging?'':' disabled')+' title="Check with no arrows">'+(mine?'No chances':'No danger')+'</button>';
-    act+='<div class="row split check-row">'+none+(!T?'<button class="btn primary" disabled>Waiting for Stockfish…</button>':S.mode==='move'&&!S.arrows.length?'<button class="btn primary" disabled>Draw your move</button>':!T?'<button class="btn primary" disabled>Waiting for Stockfish…</button>':S.judging?'<button class="btn primary" disabled>Judging your moves…</button>':'<button class="btn primary" data-a="check">Check<span class="kbd">Enter</span></button>')+'</div>';
+    act+='<div class="row split check-row">'+none+(!T?'<button class="btn primary" disabled>Waiting for Stockfish…</button>':S.mode==='move'&&!S.arrows.length?'<button class="btn primary" disabled>Draw your moves</button>':!T?'<button class="btn primary" disabled>Waiting for Stockfish…</button>':S.judging?'<button class="btn primary" disabled>Judging your moves…</button>':'<button class="btn primary" data-a="check">Check<span class="kbd">Enter</span></button>')+'</div>';
   }else if(S.mode==='move'){
-    const J=mineJudge(), k=S.arrows[0]&&akey(S.arrows[0]), mine1=k&&S.legal.has(k)?moveObj(S.legal.get(k)):null;
-    const g=mine1&&J?moveGrade(lineByKey(J.ev,mine1.key)):null, best=J&&J.ev.best?moveObj(J.ev.best.move):null;
-    // name both moves, with their evaluations
-    const lm=mine1&&J?lineByKey(J.ev,mine1.key):null, same=best&&mine1&&best.key===mine1.key;
-    const yours=mine1?'You played <b>'+esc(mine1.san)+'</b>'+(lm?' ('+fmtEval(lm,S.attacker)+(g?', '+g.tag[1]:'')+')':'')+'.':'You didn’t play a legal move.';
-    const theirs=best?(same?' That’s Stockfish’s choice too.':' Stockfish’s choice: <b>'+esc(best.san)+'</b> ('+fmtEval(J.ev.best,S.attacker)+').'):'';
-    if(S.perfect){el.classList.add('good');h='<h3>'+(g?g.tag[1]+' move':'Good move')+(S.firstTry?'':' after '+plural(S.attempts,'check'))+'</h3>';}
+    // name your moves and Stockfish's, with grades and evaluations
+    const J=mineJudge(), best=J&&J.ev.best?moveObj(J.ev.best.move):null;
+    const mineMoves=picks().filter(k=>S.legal.has(k)).map(k=>{const m=moveObj(S.legal.get(k)), l=J?lineByKey(J.ev,k):null;return {m,l,g:moveGrade(l)};});
+    const top=mineMoves.filter(x=>x.g&&x.g.right).sort((a,b)=>b.l.cp-a.l.cp)[0];
+    const yours=mineMoves.length?'You chose '+mineMoves.map(x=>'<b>'+esc(x.m.san)+'</b>'+(x.l?' ('+fmtEval(x.l,S.attacker)+(x.g?', '+x.g.tag[1]:'')+')':'')).join(', ')+'.':'You didn’t draw a legal move.';
+    const theirs=best?(mineMoves.some(x=>x.m.key===best.key)?(mineMoves.length>1?' Stockfish’s choice is among them.':' That’s Stockfish’s choice too.'):' Stockfish’s choice: <b>'+esc(best.san)+'</b> ('+fmtEval(J.ev.best,S.attacker)+').'):'';
+    if(S.perfect){el.classList.add('good');h='<h3>'+(top?top.g.tag[1]+' move found':'Good move found')+(S.firstTry?'':' on your '+nth(S.attempts)+' try')+'</h3>';}
     else h='<h3>'+(best?'Stockfish plays '+esc(best.san):'Here’s the move')+'</h3>';
     h+='<p>'+yours+theirs+'</p><p class="hint">Tap a move below to see it on the board with its line.</p>';
     if(S.roundDone){const kk=steps().filter(m=>S.results[m].firstTry).length;
@@ -931,7 +937,7 @@ function renderFeedback(){
   }else{
     if(S.perfect){
       el.classList.add('good');
-      h='<h3>'+(win?'You found a win':n?(n===1?'Found it':'All '+n+' found'):mine?'Right, nothing works':'Right, nothing real')+(S.firstTry?'':' after '+plural(S.attempts,'check'))+'</h3>'+
+      h='<h3>'+(win?'You found a win':n?(n===1?'Found it':'All '+n+' found'):mine?'Right, nothing works':'Right, nothing real')+(S.firstTry?'':' on your '+nth(S.attempts)+' try')+'</h3>'+
         '<p>'+(S.firstTry?'Right on the first check.':'Only first-check answers count toward a perfect position.')+
         (n?' See below what Stockfish makes of them.':'')+'</p>';
     }else{
@@ -954,7 +960,7 @@ fbEl.addEventListener('click',e=>{
   ({check,reveal,none:claimNone,next:newPosition,step:()=>enterStep(b.dataset.m)})[b.dataset.a]();
 });
 
-const ST={found:['✓','You found it'],missed:['!','Missed'],wrong:['✕','Not right'],extra:['✓','Fine either way'],skip:['','Rightly left out'],alt:['','Also wins; one was enough']};
+const ST={found:['✓','Good'],missed:['!','Missed'],wrong:['✕','Not right'],extra:['✓','Fine either way'],skip:['','Rightly left out'],alt:['','Also wins; one was enough']};
 function rowHtml(key,st,san,kind,l,v,mover){
   return '<button class="atk" data-k="'+key+'" aria-pressed="'+(S.focus===key)+'">'+
     '<span class="st '+st+'" title="'+ST[st][1]+'">'+ST[st][0]+'</span>'+
@@ -1005,15 +1011,16 @@ function renderReview(){
 }
 /* What to do: your move and Stockfish's, with grades and the focused one's line. */
 function renderMoveReview(ev,ready){
-  const J=mineJudge(), k=S.arrows[0]&&akey(S.arrows[0]), rows=[];
-  if(k&&S.legal.has(k))rows.push({x:moveObj(S.legal.get(k)),you:true});
-  if(J&&J.ev.best&&J.ev.best.move.slice(0,4)!==k)rows.push({x:moveObj(J.ev.best.move)});
-  $('review-title').textContent='Your move';
+  const J=mineJudge(), drawn=picks(), rows=[];
+  for(const k of drawn)if(S.legal.has(k))rows.push({x:moveObj(S.legal.get(k)),you:true});
+  if(J&&J.ev.best&&!drawn.includes(J.ev.best.move.slice(0,4)))rows.push({x:moveObj(J.ev.best.move)});
+  if(J)rows.sort((a,b)=>((lineByKey(J.ev,b.x.key)||{cp:-1e9}).cp)-((lineByKey(J.ev,a.x.key)||{cp:-1e9}).cp));
+  $('review-title').textContent=drawn.length>1?'Your moves':'Your move';
   $('review-depth').textContent=Engine.state==='error'?'No engine':ready?'Stockfish · depth '+DEPTH:'Stockfish thinking…';
   $('top-move').hidden=true;
   $('atk-list').innerHTML=rows.map(({x,you})=>{const l=J?lineByKey(J.ev,x.key):null, g=moveGrade(l);
     const same=you&&J&&J.ev.best&&J.ev.best.move.slice(0,4)===x.key;
-    return rowHtml(x.key,you?(S.perfect?'found':'wrong'):(S.perfect?'skip':'missed'),x.san,same?'your move · Stockfish’s choice too':you?'your move':'Stockfish’s choice',l,g&&g.tag,S.attacker);}).join('')||'<p class="top-move">No move drawn.</p>';
+    return rowHtml(x.key,you?(S.graded.found.has(x.key)?'found':S.graded.extra.has(x.key)?'extra':'wrong'):(S.perfect?'skip':'missed'),x.san,same?'your move · Stockfish’s choice too':you?'your move':'Stockfish’s choice',l,g&&g.tag,S.attacker);}).join('')||'<p class="top-move">No move drawn.</p>';
   const pv=$('pv'), f=S.focus&&rows.find(r=>r.x.key===S.focus), fl=f&&J?lineByKey(J.ev,f.x.key):null;
   pv.hidden=!rows.length;
   if(fl&&fl.pv)pv.innerHTML='<b>'+esc(f.x.san)+'</b> '+fmtEval(fl,S.attacker)+' · <span class="line">'+esc(pvText(S.afen,fl.pv,10))+'</span>';
