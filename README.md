@@ -17,7 +17,7 @@ Lines get one half-move longer per level (level 1 = 2 half-moves, level 15 = 16)
 To think through a line, right-click a square to highlight it or right-drag to draw an arrow (green by default; hold Shift for red, Alt for blue, Shift+Alt for yellow). Repeat the same mark to remove it; left-click the board or press Esc to clear them all.
 
 ### Spot the Danger
-Train your eye for danger and chances, one position at a time, in two steps.
+Train your thinking process, one position at a time, in three steps: dangers, chances, then your move.
 
 You get a random position from a master game: move 6 onwards, side to move not in check, and not right after a capture (where the answer is usually just to take back). The last move is highlighted. Draw arrows by dragging from a piece to its target, or tap the piece and then the target.
 
@@ -26,12 +26,13 @@ You get a random position from a master game: move 6 onwards, side to move not i
    - **If you have a win** (Stockfish's best move leaves you two pawns up), it's a puzzle and one winning move is enough. A winning move leaves you two pawns up too, and is within a pawn of the best move, or, when the best move wins a lot more than passing would, wins at least half as much. Winning a rook next to a mate counts, but drifting in a won position doesn't.
    - **Otherwise** draw each capture or check that **works**: Stockfish rates it within a pawn of its best move.
    - Either way, **dubious** moves (up to two and a half pawns worse) and moves that still leave you winning are fine to add, and drawing a **trap** is wrong.
+3. **What to do.** Now decide: draw the one move you'd play, whether a defence, an attack or a quiet move. Drawing another arrow replaces it. Stockfish grades it against its best move: within half a pawn is right (**Best** / **Good**), and so is any move that keeps a win. Otherwise it's **Inaccurate**, a **Mistake** or a **Blunder**, and you can try again or ask for Stockfish's move and its line.
 
 Taking a loose piece is usually a real threat or an attack that works. A piece is loose when the exchange on its square wins material: both sides take turns capturing there with their cheapest piece and may stop at any point. The review labels these captures.
 
-If you think a step has nothing to find, press **No danger** or **No chances** (next to **Check**). Stockfish (in its own worker thread, depth 18) analyses both steps as soon as the position loads, and **Check** waits for it if needed. While you play, it also prepares the next three positions, so the next one is usually judged by the time you get there. After checking, wrong arrows turn red, and you can keep looking or press **Show all**. Found answers are green, missed ones dashed orange, and optional ones blue. The review lists every capture and check with its grade and evaluation, and shows Stockfish's own choice, which may be a quiet move. Tap a row to see its line. Without the engine, material decides: captures that win material must be found, even trades are optional, losing ones are wrong, and quiet moves don't count either way.
+If you think a step has nothing to find, press **No danger** or **No chances** (next to **Check**). Stockfish (in its own worker thread, depth 18) analyses both steps as soon as the position loads, and **Check** waits for it if needed. While you play, it also prepares the next three positions, so the next one is usually judged by the time you get there; the position on screen always comes first. After checking, wrong arrows turn red, and you can keep looking or press **Show all**. Found answers are green, missed ones dashed orange, and optional ones blue. The review lists every capture and check with its grade and evaluation, and shows Stockfish's own choice, which may be a quiet move. Tap a row to see its line. Without the engine, material decides: captures that win material must be found, even trades are optional, losing ones are wrong, and quiet moves don't count either way.
 
-Positions come right after the opponent's move, which more often leaves your pieces loose than theirs, so the picker asks for a loose piece of theirs as often as one of yours; about one in five has none at all, so "nothing here" stays a real answer. A position is perfect when both steps are right on the first check, and perfect positions in a row build a streak. Settings let you leave checks out and show how many there are to find. Progress is saved in the browser.
+Positions come right after the opponent's move, which more often leaves your pieces loose than theirs, so the picker asks for a loose piece of theirs as often as one of yours; about one in five has none at all, so "nothing here" stays a real answer. A position is perfect when all three steps are right on the first check, and perfect positions in a row build a streak. Settings let you leave checks out and show how many there are to find. Progress is saved in the browser.
 
 ## Development
 
