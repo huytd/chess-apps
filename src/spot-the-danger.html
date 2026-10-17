@@ -17,6 +17,8 @@
 .turn-dot.w{background:#FFFFFF}
 .turn-dot.b{background:#111111}
 .turn b{font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.1;letter-spacing:-.015em}
+.check-row{align-items:stretch}
+.check-row > .btn{border-radius:12px}
 .stepper{display:flex;gap:6px}
 .stepper button{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;text-align:left;transition:background .12s, border-color .12s, color .12s}
 .stepper button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -610,7 +612,7 @@ function renderFeedback(){
       act='<div class="row"><button class="btn small ghost" data-a="reveal">Show all</button></div>';
     }
     const none='<button class="btn" data-a="none"'+(T&&!S.judging?'':' disabled')+' title="Check with no arrows">'+(mine?'No chances':'No danger')+'</button>';
-    act+='<div class="row split">'+none+(!T?'<button class="btn primary" disabled>Waiting for Stockfish…</button>':S.judging?'<button class="btn primary" disabled>Judging your moves…</button>':'<button class="btn primary" data-a="check">Check<span class="kbd">Enter</span></button>')+'</div>';
+    act+='<div class="row split check-row">'+none+(!T?'<button class="btn primary" disabled>Waiting for Stockfish…</button>':S.judging?'<button class="btn primary" disabled>Judging your moves…</button>':'<button class="btn primary" data-a="check">Check<span class="kbd">Enter</span></button>')+'</div>';
   }else{
     if(S.perfect){
       el.classList.add('good');
