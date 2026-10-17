@@ -366,7 +366,7 @@ a:hover{text-decoration-color:currentColor}
 <script>
 (function(){
 "use strict";
-const FILES='abcdefgh', DEPTH=14, MIN_PLY=12, MAX_PLY=100, MAX_ATTACKS=12, MAX_HANGING=4, SAFE_SHARE=.2;
+const FILES='abcdefgh', DEPTH=18, AHEAD_N=3, MIN_PLY=12, MAX_PLY=100, MAX_ATTACKS=12, MAX_HANGING=4, SAFE_SHARE=.2;
 /* Each position is a round of two steps on the same board: what the opponent could do to you, then what you can do.
    Internally the dangers step is "theirs" (the opponent's captures and checks) and the chances step is "mine". */
 const STEPS={theirs:'Dangers',mine:'Chances'};
@@ -491,19 +491,23 @@ function pick(){
 }
 
 /* ---------- Stockfish (WASM, in a worker) ---------- */
-/* One search at a time. Each job sets MultiPV, the position and a depth (optionally restricted with searchmoves),
-   and gets back the last full-depth line for each PV when "bestmove" arrives. Cancelled jobs are stopped and dropped. */
+/* One search at a time, in the engine's own worker thread. Each job sets MultiPV, the position and a depth (optionally
+   restricted with searchmoves), and gets back the last full-depth line for each PV when "bestmove" arrives. Jobs
+   belong to a position (owner): the one on screen (E.current) goes first, the rest of the queue is positions being
+   prepared ahead. Dropping a position removes its queued jobs and stops its running one. */
 const Engine=(function(){
   let w=null, job=null, timer=null;const queue=[];
-  const E={state:'loading',onState:null,run(j){queue.push(j);next();},
-    cancel(){queue.length=0;if(job&&!job.cancelled){job.cancelled=true;w.postMessage('stop');}}};
+  const E={state:'loading',onState:null,current:null,run(j){queue.push(j);next();},
+    drop(owner){for(let i=queue.length-1;i>=0;i--)if(queue[i].owner===owner)queue.splice(i,1);
+      if(job&&job.owner===owner&&!job.cancelled){job.cancelled=true;w.postMessage('stop');}}};
   // a failing listener must not stall the queue, so state updates and results are reported in try/finally
   function set(s){E.state=s;if(E.onState)try{E.onState();}catch(e){setTimeout(()=>{throw e;});}}
   function fail(){clearTimeout(timer);if(w)try{w.terminate();}catch(e){}w=null;job=null;queue.length=0;set('error');}
   function next(){
     if(job||!w||E.state==='loading'||E.state==='error')return;
     if(!queue.length){set('ready');return;}
-    job=queue.shift();job.lines={};set('busy');
+    const k=queue.findIndex(j=>j.owner===E.current);
+    job=queue.splice(k<0?0:k,1)[0];job.lines={};set('busy');
     w.postMessage('setoption name MultiPV value '+job.multipv);
     w.postMessage('position fen '+job.fen);
     w.postMessage('go depth '+job.depth+(job.moves?' searchmoves '+job.moves.join(' '):''));
@@ -540,14 +544,26 @@ const S={gi:0,ply:0,fen:'',last:null,board:null,turn:'w',flipped:false,evals:{},
 const STEP_FIELDS=['arrows','history','graded','attempts','phase','result','focus','perfect','firstTry'];
 const stats=()=>P.stats.rounds;
 
+/* Positions are prepared AHEAD_N ahead: picked and queued for analysis while you work, so the next one is usually
+   judged by the time you get to it. The one on screen always gets the engine first. */
+const ahead=[];let topUpTimer=null;
 function newPosition(){
-  const p=pick();
-  Object.assign(S,{gi:p.gi,ply:p.ply,fen:p.fen,last:p.last,board:parse(p.fen),turn:p.fen.split(' ')[1],evals:{},answersBy:p.answers,saved:{},results:{},roundDone:false,mode:null});
+  if(S.prep)Engine.drop(S.prep);
+  const prep=ahead.shift()||prepare(pick()), p=prep.p;
+  Engine.current=prep;
+  Object.assign(S,{prep,gi:p.gi,ply:p.ply,fen:p.fen,last:p.last,board:parse(p.fen),turn:p.fen.split(' ')[1],evals:prep.evals,answersBy:p.answers,saved:{},results:{},roundDone:false,mode:null});
   S.flipped=S.turn==='b';
-  // show the new position before analysing it: the engine's status updates render the current step
   save();enterStep(steps()[0]);
-  analyse();
+  topUp();
 }
+/* One pick at a time, a moment apart, so preparing never makes the page stutter. */
+function topUp(){
+  clearTimeout(topUpTimer);
+  if(ahead.length>=AHEAD_N||Engine.state==='error')return;
+  topUpTimer=setTimeout(()=>{ahead.push(prepare(pick()));save();topUp();},300);
+}
+/* Settings that change the answers make prepared positions stale. */
+function dropAhead(){clearTimeout(topUpTimer);for(const a of ahead)Engine.drop(a);ahead.length=0;}
 function enterStep(mode){
   if(S.mode){const o={};for(const f of STEP_FIELDS)o[f]=S[f];S.saved[S.mode]=o;}
   const afen=attackFen(S.fen,mode);
@@ -565,15 +581,16 @@ function goOn(){const n=nextStep();if(n)enterStep(n);else newPosition();}
    check via searchmoves. The real position's free choice goes first, since it sets the bar for the dangers step. */
 const evalKey=m=>m+(P.checks?'+':'-');
 const currentEval=()=>S.evals[evalKey(S.mode)]||null;
-function analyse(){
-  Engine.cancel();S.evals={};
-  if(Engine.state==='error')return;
+function prepare(p){
+  const prep={p,evals:{}};
+  if(Engine.state==='error')return prep;
   const E={};
-  for(const m of steps()){const ucis=S.answersBy[m].map(a=>a.uci);E[m]=S.evals[evalKey(m)]={fen:attackFen(S.fen,m),ucis,best:null,moves:{},extra:{},left:ucis.length?2:1,done:false};}
+  for(const m of steps()){const ucis=p.answers[m].map(a=>a.uci);E[m]=prep.evals[evalKey(m)]={fen:attackFen(p.fen,m),ucis,best:null,moves:{},extra:{},left:ucis.length?2:1,done:false};}
   const tick=ev=>{if(--ev.left)return;ev.done=true;if(currentEval()===ev)render();};
-  const best=ev=>Engine.run({fen:ev.fen,multipv:1,depth:DEPTH,done:r=>{ev.best=r[0]||null;tick(ev);}});
-  const each=ev=>{if(ev.ucis.length)Engine.run({fen:ev.fen,multipv:ev.ucis.length,depth:DEPTH,moves:ev.ucis,done:r=>{for(const l of r)ev.moves[l.move.slice(0,4)]=l;tick(ev);}});};
+  const best=ev=>Engine.run({owner:prep,fen:ev.fen,multipv:1,depth:DEPTH,done:r=>{ev.best=r[0]||null;tick(ev);}});
+  const each=ev=>{if(ev.ucis.length)Engine.run({owner:prep,fen:ev.fen,multipv:ev.ucis.length,depth:DEPTH,moves:ev.ucis,done:r=>{for(const l of r)ev.moves[l.move.slice(0,4)]=l;tick(ev);}});};
   best(E.mine);best(E.theirs);each(E.theirs);each(E.mine);
+  return prep;
 }
 
 /* ---------- input ---------- */
@@ -684,7 +701,7 @@ function judgeThen(fn){
   if(!pend.length)return fn();
   if(S.judging)return;
   S.judging=true;render();
-  Engine.run({fen:ev.fen,multipv:pend.length,depth:DEPTH,moves:pend,done:r=>{
+  Engine.run({owner:S.prep,fen:ev.fen,multipv:pend.length,depth:DEPTH,moves:pend,done:r=>{
     for(const l of r)ev.extra[l.move.slice(0,4)]=l;
     S.judging=false;if(S.mode==='mine'&&S.phase==='find')fn();else render();}});
 }
@@ -814,9 +831,9 @@ function renderEngine(){
   if(st==='error')txt='Stockfish unavailable';
   else if(st==='loading')txt='Stockfish loading';
   else if(ev&&!ev.done)st='busy',txt='Stockfish thinking';
-  else txt='Stockfish ready';
+  else st='ready',txt='Stockfish ready';
   chip.className='engine-chip '+st;chip.lastElementChild.textContent=txt;
-  chip.title=st==='error'?'The engine could not start. Serve docs/ over http(s) rather than opening the file directly.':'Stockfish 19 lite (WASM), depth '+DEPTH;
+  chip.title=st==='error'?'The engine could not start. Serve docs/ over http(s) rather than opening the file directly.':'Stockfish 19 lite (WASM), depth '+DEPTH+'. Upcoming positions are analysed while you play: '+ahead.length+' ready or in progress.';
 }
 Engine.onState=()=>{if(Engine.state==='error'){S.judging=false;render();return;}renderEngine();if(S.phase==='done')renderReview();};
 
@@ -1009,7 +1026,7 @@ $('stepper').addEventListener('click',e=>{
 $('btn-undo').onclick=undo;$('btn-clear').onclick=clearPicks;
 $('btn-flip').onclick=()=>{S.flipped=!S.flipped;render();};
 $('opt-checks').checked=!!P.checks;$('opt-total').checked=!!P.showTotal;
-$('opt-checks').onchange=e=>{P.checks=e.target.checked;newPosition();};
+$('opt-checks').onchange=e=>{P.checks=e.target.checked;dropAhead();newPosition();};
 $('opt-total').onchange=e=>{P.showTotal=e.target.checked;save();render();};
 const setBtn=$('btn-settings'),setPanel=$('settings-panel');
 function toggleSettings(open){setPanel.hidden=!open;setBtn.setAttribute('aria-expanded',open?'true':'false');}
