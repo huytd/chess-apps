@@ -565,7 +565,7 @@ async function fetchChessCom(user,n,speeds,status){
 /* ---------- running an analysis ---------- */
 /* S: what's on screen. games are the fetched games (newest first), results their analyses by key, progress the
    per-game share of moves done while running. */
-const S={games:[],results:new Map(),progress:{},agg:null,pattern:null,picked:false,ex:0,view:'move',flipped:false,status:null,running:false};
+const S={depth:12,games:[],results:new Map(),progress:{},agg:null,pattern:null,picked:false,ex:0,view:'move',flipped:false,status:null,running:false};
 let run=null;
 async function start(){
   const user=$('user').value.trim(), n=+$('count').value;
@@ -575,7 +575,7 @@ async function start(){
   showErr('');
   D.user=user;D.users[D.site]=user;D.count=n;save();
   const me=run={cancelled:false};
-  S.running=true;S.games=[];S.results=new Map();S.progress={};S.agg=null;S.pattern=null;S.picked=false;
+  S.running=true;S.depth=D.depth;S.games=[];S.results=new Map();S.progress={};S.agg=null;S.pattern=null;S.picked=false;
   setStatus({text:'Fetching your games from '+SITE[D.site]+'…'});render();
   try{
     const games=D.site==='lichess'?await fetchLichess(user,n,speeds):await fetchChessCom(user,n,speeds,t=>setStatus({text:t}));
@@ -678,7 +678,7 @@ function renderStatus(){
   }
   if(s)html+='<p'+(s.error?' style="color:var(--bad)"':'')+'>'+esc(s.text)+'</p>'+(s.hint?'<p class="hint">'+esc(s.hint)+'</p>':'');
   if(S.games.length){
-    html+='<details class="games"'+(S.gamesOpen?' open':'')+'><summary>'+S.games.length+' games · '+esc(S.games[0].user)+' on '+SITE[S.games[0].site]+'</summary><div class="game-list">'+S.games.map(g=>{
+    html+='<details class="games"'+(S.gamesOpen?' open':'')+'><summary>'+S.games.length+' games · '+esc(S.games[0].user)+' on '+SITE[S.games[0].site]+' · depth '+S.depth+'</summary><div class="game-list">'+S.games.map(g=>{
       const r=S.results.get(g.key), p=S.progress[g.key];
       const st=r?'<b>'+(r.accuracy!=null?Math.round(r.accuracy)+'%':'–')+'</b> · '+r.errors.length+' err':p!=null?Math.round(p*100)+'%':'queued';
       return '<div class="game-row"><span class="res '+g.result+'" title="'+g.result+'">'+(g.result==='win'?'W':g.result==='loss'?'L':'D')+'</span>'+

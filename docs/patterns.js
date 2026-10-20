@@ -340,7 +340,10 @@ function aggregate(results) {
   }).sort((a, b) => (b.kind === 'motif') - (a.kind === 'motif') || b.recurring - a.recurring || b.cost - a.cost);
   const summary = { games, moves, errors, lost, byPhase, byQuality, accuracy: accs.length ? accs.reduce((a, b) => a + b, 0) / accs.length : null,
     wins: results.filter(g => g.result === 'win').length, losses: results.filter(g => g.result === 'loss').length };
-  for (const p of patterns) p.analysis = analyse(p, summary);
+  // a slip in the write-up must not hide the results, so a pattern whose text fails keeps its numbers and tips
+  for (const p of patterns) {
+    try { p.analysis = analyse(p, summary); } catch (e) { p.analysis = { text: [`${times(p.count)} in ${p.gameCount} of your ${games} games.`], tips: TIPS[p.id] || [] }; }
+  }
   summary.insights = insights(summary, patterns, results);
   return { summary, patterns };
 }
@@ -438,10 +441,10 @@ function specifics(p, items) {
   switch (p.id) {
     case 'hanging': {
       const pcs = tally(d.map(x => x.piece));
-      const def = d.filter(x => x.how === 'removed_defender').length, cap = d.filter(x => x.capture && x.how !== 'removed_defender').length;
+      const n = items.length, def = d.filter(x => x.how === 'removed_defender').length, caps = d.filter(x => x.capture && x.how !== 'removed_defender').length;
       let s = `Pieces left loose: ${listText(pcs, (k, c) => `${k} ${times(c)}`)}.`;
-      if (def) s += ` ${def === items.length ? 'Every time' : cap(times(def))}, the piece you moved had been defending it.`;
-      if (cap) s += ` ${cap === items.length ? 'Each was' : plural(cap, 'was a capture', 'were captures')}${cap === items.length ? ' a capture' : ''} on a square the opponent could win back with interest.`;
+      if (def) s += ` ${def === n ? (n === 1 ? 'The' : 'Every time, the') : cap(times(def)) + ', the'} piece you moved had been defending it.`;
+      if (caps) s += ` ${some(caps, n)} ${caps === 1 ? 'a capture' : 'captures'} on a square the opponent could win back with interest.`;
       return s;
     }
     case 'fork': return `Forking piece: ${listText(tally(d.map(x => x.attacker)), (k, c) => `${k} ${times(c)}`)}.`;
