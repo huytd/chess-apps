@@ -1,6 +1,6 @@
 # Chess Vision Lab
 
-Browser-based chess training drills. No build step needed to run: serve `docs/` (for example `python3 -m http.server -d docs`) and open it. Line Vision also works straight from the file; Spot the Danger needs http(s) for its engine, and without it the drill still works but shows no evaluations.
+Browser-based chess training drills, and an analysis of your own games. No build step needed to run: serve `docs/` (for example `python3 -m http.server -d docs`) and open it. Line Vision also works straight from the file; Spot the Danger needs http(s) for its engine, and without it the drill still works but shows no evaluations. Mistake Patterns needs http(s) and an internet connection to fetch your games.
 
 ## Drills
 
@@ -34,16 +34,47 @@ If you think a step has nothing to find, press **No danger** or **No chances** (
 
 Positions come right after the opponent's move, which more often leaves your pieces loose than theirs, so the picker asks for a loose piece of theirs as often as one of yours; about one in five has none at all, so "nothing here" stays a real answer. A position is perfect when all three steps are right on the first check, and perfect positions in a row build a streak. After a correct answer it goes on to the next step by itself after a short pause (the last step waits for you), with a countdown on the button; **Stay**, or tapping a move in the review, cancels it. Settings let you turn that off, leave checks out and show how many there are to find. Progress is saved in the browser.
 
+## Analysis
+
+### Mistake Patterns
+Find the mistakes you keep making across your recent games.
+
+1. Pick **Lichess** or **Chess.com**, enter your username, choose how many recent games (5 to 50) and which time controls.
+2. **Analyse games** fetches them from the site's public API and checks every one of your moves with Stockfish, in your browser. Results fill in game by game; **Stop** keeps what is done so far.
+3. The patterns are listed by the win chance they cost you, recurring ones (seen in two games or more) first. Pick one to read its analysis and step through its examples on the board.
+
+Moves are judged the way [WhyBlunder](https://github.com/huytd/whyblunder) does it, using its own modules: a MultiPV 3 search before your move, a search for the opponent's best reply when your move wasn't the engine's choice, and `MoveDiagnostics.diagnose()` for the verdict (win-probability loss with WhyBlunder's adaptive inaccuracy, mistake and blunder bands, book moves skipped) and its explanation. On every mistake and blunder, a null-move search shows what the opponent was threatening.
+
+Each mistake and blunder (inaccuracies too, if you turn them on in Settings) gets one **main pattern**, the first of these that fits, found with WhyBlunder's SituationRecognizer:
+
+- **Walking into mate**: your move allows a forced mate (back-rank mates are counted).
+- **Missing a forced mate**: you had one.
+- **Leaving pieces en prise**: the moved piece can be won (static exchange), or it was the defender of one.
+- **Ignoring the opponent's threat**: they had a threat that wins material or mates, and your move left you about where passing would have, or they carried it out.
+- **Allowing forks**, **Allowing pins and skewers**, **Overlooking discovered attacks**: the opponent's best reply is one.
+- **Missing the opponent's combination**: their best line wins a piece or more by force.
+- **Missing tactics for you**: your best line won a piece or more (the review names the motif: fork, pin, loose piece…).
+- **Weakening your king**, **Opening principles**, **Endgame technique**, and **Quiet-move slips** for the rest.
+
+On top of that, **context patterns** describe the circumstances: **mistakes in time trouble** (under a tenth of the base time, 10 to 60 seconds), **moving too fast** (played in 2 to 5 seconds, depending on the time control, with more than a quarter of your time left), **letting a win slip** (from 85% win chance or better to 55% or less) and **not punishing their mistakes** (the opponent's move just before had handed you 15% or more).
+
+For each pattern the analysis says how often and in how many games it happened, its share of your mistakes, what it cost, when it happens (phase, colour, clock), the details that recur (which pieces you leave loose, which piece forks you, which motif you miss, which endings), how many lost games it decided, and what to work on. Each example shows the position with your move, the better move and the threat (or, under **Their reply**, the position after your move and their best answer), WhyBlunder's explanation, both lines, and a link to the game.
+
+Settings choose the engine depth (Quick 10, Normal 12, Deep 16). Analysed games are saved in the browser (up to 200), so running again only analyses new games; a link like `mistake-patterns.html?site=lichess&user=NAME` starts straight away. Stockfish runs in up to four worker threads, each searching from a fresh hash so results are repeatable.
+
 ## Development
 
 ```sh
 npm install
-npm run build   # writes docs/: index.html, spot-the-danger.html, games.js, chess.js, stockfish.js + .wasm
+npm run build   # writes docs/: index.html, spot-the-danger.html, mistake-patterns.html, games.js, chess.js, whyblunder.js, patterns.js, stockfish.js + .wasm
 ```
 
-- `src/line-vision.html`, `src/spot-the-danger.html` — page sources (CSS + JS), one per drill. The build fills in `/*PIECES*/`, `/*COMMON*/` (`src/common.css`, styles shared by every drill), `<!--NAV-->` (links between drills) and `/*GAME_COUNT*/`. To add a drill, add its page to `APPS` in `scripts/build.js`.
+- `src/line-vision.html`, `src/spot-the-danger.html`, `src/mistake-patterns.html` — page sources (CSS + JS), one per app. The build fills in `/*PIECES*/`, `/*COMMON*/` (`src/common.css`, styles shared by every drill), `<!--NAV-->` (links between drills) and `/*GAME_COUNT*/`. To add a drill, add its page to `APPS` in `scripts/build.js`.
 - `src/games.txt` — one line per source: `Name|1.e4 e5 2.Nf3 ...` (about 5,000 games). Names containing ` vs ` are shown as games, the rest as opening lines.
 - `scripts/build.js` — validates every move with chess.js and packs each game into `docs/games.js` at 2 characters per move; the page replays only the game it shows. Validated lines are cached in `node_modules/.cache`, so the first build takes under a minute and later ones are instant. Also inlines piece images, copies chess.js to `docs/chess.js`, and copies the Stockfish.js lite single-threaded WASM engine to `docs/stockfish.js` + `docs/stockfish.wasm` (single-threaded, so it needs no cross-origin isolation headers; about 1.8 MB).
+
+- `src/patterns.js` — Mistake Patterns' analysis: game import, per-game analysis, pattern detection and the write-up. Copied to `docs/patterns.js`. It also runs in Node: `require('./src/patterns.js')(Chess, require('./docs/whyblunder.js'))`, with any engine that has `search(fen, depth, multipv)`.
+- `vendor/whyblunder/` — WhyBlunder's analysis modules, unmodified (see its README for the commit). The build bundles them with their own chess.js 0.10.3 into `docs/whyblunder.js`, which exposes one global, `WhyBlunder`.
 
 Line Vision picks lines uniformly over every slice of every game, skipping slices that overlap recently seen ones from the same game.
 
@@ -58,5 +89,9 @@ Piece set: cburnett, via [chessground](https://github.com/lichess-org/chessgroun
 Game scores: [PGN Mentor](https://www.pgnmentor.com/files.html) player collections (Morphy through Carlsen; classical games before 2016, 30–100 half-moves).
 
 Move logic: [chess.js](https://github.com/jhlywa/chess.js) (BSD-2-Clause).
+
+Move analysis: [WhyBlunder](https://github.com/huytd/whyblunder) (move diagnostics, tactical recognition, opening book), with chess.js 0.10.3.
+
+Games: the [Lichess API](https://lichess.org/api) and the [Chess.com Published-Data API](https://www.chess.com/news/view/published-data-api).
 
 Engine: [Stockfish.js](https://github.com/nmrugg/stockfish.js) 19 lite (GPLv3, license in `docs/stockfish-COPYING.txt`), based on [Stockfish](https://github.com/official-stockfish/Stockfish).

@@ -1,0 +1,1238 @@
+/**
+ * move-diagnostics.js - Unified move diagnosis engine for WhyBlunder.
+ *
+ * Exposes MoveDiagnostics.diagnose(options) which gathers engine evidence,
+ * computes adaptive classification, evaluates tactical patterns, and
+ * returns structured narrative and diagnostic evidence.
+ *
+ * Compatible with Browser and Node.js (UMD).
+ */
+(function(root, factory) {
+    if (typeof module === 'object' && module.exports) {
+        module.exports = factory();
+    } else {
+        root.MoveDiagnostics = factory();
+    }
+}(typeof self !== 'undefined' ? self : this, function() {
+    'use strict';
+
+    function getChessConstructor() {
+        if (typeof Chess !== 'undefined') return Chess;
+        if (typeof window !== 'undefined' && window.Chess) return window.Chess;
+        if (typeof global !== 'undefined' && global.Chess) return global.Chess;
+        try {
+            const c = require('./chess.min.js');
+            return c.Chess || c;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function getEvaluator() {
+        if (typeof ChessEvaluator !== 'undefined') return ChessEvaluator;
+        if (typeof window !== 'undefined' && window.ChessEvaluator) return window.ChessEvaluator;
+        if (typeof global !== 'undefined' && global.ChessEvaluator) return global.ChessEvaluator;
+        try { return require('./chess-evaluator.js'); } catch (e) { return null; }
+    }
+
+    function getDetector() {
+        if (typeof OpeningDetector !== 'undefined') return OpeningDetector;
+        if (typeof window !== 'undefined' && window.OpeningDetector) return window.OpeningDetector;
+        if (typeof global !== 'undefined' && global.OpeningDetector) return global.OpeningDetector;
+        try { return require('./opening-detector.js'); } catch (e) { return null; }
+    }
+
+    function getRecognizer() {
+        if (typeof SituationRecognizer !== 'undefined') return SituationRecognizer;
+        if (typeof window !== 'undefined' && window.SituationRecognizer) return window.SituationRecognizer;
+        if (typeof global !== 'undefined' && global.SituationRecognizer) return global.SituationRecognizer;
+        try { return require('./situation-recognizer.js'); } catch (e) { return null; }
+    }
+
+    function uciToSan(chessInstance, uciMove) {
+        if (!uciMove || typeof uciMove !== 'string' || uciMove.length < 4) return '';
+        const from = uciMove.substring(0, 2);
+        const to = uciMove.substring(2, 4);
+        const promotion = uciMove.length > 4 ? uciMove[4] : undefined;
+        try {
+            const m = chessInstance.move({ from, to, promotion });
+            if (m) {
+                const san = m.san;
+                chessInstance.undo();
+                return san;
+            }
+        } catch (e) {}
+        return uciMove;
+    }
+
+    function formatPv(chessInstance, uciMoves, maxMoves) {
+        maxMoves = maxMoves || 5;
+        if (!uciMoves || !Array.isArray(uciMoves) || uciMoves.length === 0) return '';
+        const ChessCtor = getChessConstructor();
+        if (!ChessCtor) return uciMoves.slice(0, maxMoves).join(' ');
+        const temp = new ChessCtor(chessInstance.fen());
+        const tokens = [];
+        for (let i = 0; i < Math.min(maxMoves, uciMoves.length); i++) {
+            const uci = uciMoves[i];
+            if (!uci || typeof uci !== 'string' || uci.length < 4) break;
+            try {
+                const isWhite = (temp.turn() === 'w');
+                const moveNum = parseInt(temp.fen().split(' ')[5], 10) || 1;
+                const m = temp.move({
+                    from: uci.substring(0, 2),
+                    to: uci.substring(2, 4),
+                    promotion: uci.length > 4 ? uci[4] : undefined
+                });
+                if (!m) break;
+                if (isWhite) tokens.push(`${moveNum}. ${m.san}`);
+                else if (i === 0) tokens.push(`${moveNum}... ${m.san}`);
+                else tokens.push(m.san);
+            } catch (e) {
+                break;
+            }
+        }
+        return tokens.join(' ');
+    }
+
+    function detectOfferedPiece(boardBefore, boardAfter, moveObj, Recognizer) {
+        if (!Recognizer || !Recognizer.staticExchangeEval) return false;
+        if (!moveObj || !moveObj.to) return false;
+
+        const oppTurn = boardAfter.turn();
+        const moverTurn = oppTurn === 'w' ? 'b' : 'w';
+
+        const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+        let capturedValue = 0;
+        if (moveObj.captured) {
+            capturedValue = pieceValues[moveObj.captured] || 0;
+        }
+
+        const fenBeforeTokens = boardBefore.fen().split(' ');
+        fenBeforeTokens[1] = oppTurn;
+        fenBeforeTokens[3] = '-'; 
+        const ChessCtor = getChessConstructor();
+        const boardBeforeFlipped = new ChessCtor(fenBeforeTokens.join(' '));
+
+        const moves = boardAfter.moves({ verbose: true });
+        let maxSee = 0;
+        let offeredPieceSquare = null;
+        let offeredPieceType = null;
+
+        for (const m of moves) {
+            if (m.flags.includes('c') || m.flags.includes('e')) {
+                const targetSq = m.to;
+                const targetPiece = boardAfter.get(targetSq);
+                if (!targetPiece) continue; 
+                
+                const type = targetPiece.type;
+                const val = pieceValues[type] || 0;
+                
+                if (val >= 3 && targetPiece.color === moverTurn) {
+                    let wasEnPrise = false;
+                    if (targetSq !== moveObj.to) {
+                        const seeBefore = Recognizer.staticExchangeEval(boardBeforeFlipped, targetSq, oppTurn);
+                        if (seeBefore > 0) {
+                            wasEnPrise = true;
+                        }
+                    }
+
+                    if (!wasEnPrise) {
+                        const seeAfter = Recognizer.staticExchangeEval(boardAfter, targetSq, oppTurn);
+                        if (seeAfter > maxSee) {
+                            maxSee = seeAfter;
+                            offeredPieceSquare = targetSq;
+                            offeredPieceType = type;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (maxSee - capturedValue >= 2) {
+            return {
+                isOffered: true,
+                piece: offeredPieceType,
+                square: offeredPieceSquare
+            };
+        }
+        return false;
+    }
+
+    // =====================================================================
+    // "WHY" BUILDERS
+    // Engine-free, deterministic helpers that turn MultiPV lines into the
+    // four answers a student needs: situation, threat, idea, alternatives.
+    // =====================================================================
+
+    const WHY_PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+    const WHY_PIECE_NAMES = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+    const WHY_ABOUT_EQUAL_WP = 0.02;
+    const WHY_SLIGHTLY_WORSE_WP = 0.08;
+    const WHY_THREAT_MIN_WP = 0.05;
+    const WHY_THREAT_MIN_CP = 120;
+
+    function sideName(color) {
+        return color === 'w' ? 'White' : 'Black';
+    }
+
+    function pieceLabel(type, square) {
+        if (type === 'p') return square ? `the ${square[0]}-pawn` : 'a pawn';
+        return `the ${WHY_PIECE_NAMES[type] || 'piece'}`;
+    }
+
+    function joinWords(items) {
+        if (items.length <= 1) return items.join('');
+        if (items.length === 2) return `${items[0]} and ${items[1]}`;
+        return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+    }
+
+    const WHY_COUNT_WORDS = { 2: 'two', 3: 'three', 4: 'four', 5: 'five' };
+
+    /** Describe a list of captured pieces: "the f-pawn", "two pawns", "the bishop and a pawn". */
+    function describePieces(list) {
+        if (list.length === 0) return 'nothing';
+        const order = ['q', 'r', 'b', 'n', 'p'];
+        const parts = [];
+        order.forEach(type => {
+            const ofType = list.filter(c => c.type === type);
+            if (ofType.length === 0) return;
+            if (ofType.length > 1) {
+                parts.push(`${WHY_COUNT_WORDS[ofType.length] || ofType.length} ${WHY_PIECE_NAMES[type]}s`);
+            } else if (type === 'p') {
+                parts.push(list.length === 1 ? pieceLabel('p', ofType[0].square) : 'a pawn');
+            } else {
+                parts.push(pieceLabel(type));
+            }
+        });
+        return joinWords(parts);
+    }
+
+    /** Remove like-for-like pairs (queen for queen, pawn for pawn) so only the real imbalance is described. */
+    function cancelEqualTrades(gained, lost) {
+        const g = gained.slice();
+        const l = lost.slice();
+        for (let i = g.length - 1; i >= 0; i--) {
+            const j = l.findIndex(c => c.type === g[i].type);
+            if (j >= 0) {
+                g.splice(i, 1);
+                l.splice(j, 1);
+            }
+        }
+        return { gained: g, lost: l };
+    }
+
+    function isPassedPawn(board, square, color) {
+        const file = square.charCodeAt(0);
+        const rank = parseInt(square[1], 10);
+        const dir = color === 'w' ? 1 : -1;
+        for (let f = file - 1; f <= file + 1; f++) {
+            if (f < 97 || f > 104) continue;
+            for (let r = rank + dir; r >= 1 && r <= 8; r += dir) {
+                const p = board.get(String.fromCharCode(f) + r);
+                if (p && p.type === 'p' && p.color !== color) return false;
+            }
+        }
+        return true;
+    }
+
+    function squareDistance(a, b) {
+        return Math.max(Math.abs(a.charCodeAt(0) - b.charCodeAt(0)), Math.abs(parseInt(a[1], 10) - parseInt(b[1], 10)));
+    }
+
+    /**
+     * Play a UCI principal variation and summarize what actually happens in it,
+     * from the point of view of the side to move in `fen`.
+     * @returns {object} { events, gained, lost, net, promotions, kingBlock, ledgerText, text }
+     */
+    function summarizeLine(fen, pvUci, options = {}) {
+        const ChessCtor = getChessConstructor();
+        const empty = { events: [], gained: [], lost: [], net: 0, promotions: [], kingBlock: null, ledgerText: '', text: '' };
+        if (!ChessCtor || !fen || !Array.isArray(pvUci) || pvUci.length === 0) return empty;
+
+        const maxPlies = options.maxPlies || 8;
+        const board = new ChessCtor(fen);
+        const mover = board.turn();
+        const events = [];
+        const gained = [];
+        const lost = [];
+        const promotions = [];
+        let net = 0;
+        let kingBlock = null;
+
+        for (let i = 0; i < Math.min(maxPlies, pvUci.length); i++) {
+            const uci = pvUci[i];
+            if (!uci || typeof uci !== 'string' || uci.length < 4) break;
+            const color = board.turn();
+            const moveNum = parseInt(board.fen().split(' ')[5], 10) || 1;
+            let m = null;
+            try {
+                m = board.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci.length > 4 ? uci[4] : undefined });
+            } catch (e) { m = null; }
+            if (!m) break;
+
+            const label = color === 'w' ? `${moveNum}.${m.san}` : `${moveNum}...${m.san}`;
+            const sign = color === mover ? 1 : -1;
+            const ev = { ply: i, color, san: m.san, label, from: m.from, to: m.to, piece: m.piece };
+
+            if (m.captured) {
+                const capSquare = (m.flags && m.flags.includes('e')) ? (m.to[0] + m.from[1]) : m.to;
+                ev.captured = m.captured;
+                (color === mover ? gained : lost).push({ type: m.captured, square: capSquare, label });
+                net += sign * WHY_PIECE_VALUES[m.captured];
+            }
+            if (m.promotion) {
+                ev.promotion = m.promotion;
+                promotions.push({ color, label, square: m.to });
+                net += sign * (WHY_PIECE_VALUES[m.promotion] - 1);
+            }
+            if (m.san.includes('+') || m.san.includes('#')) ev.check = true;
+            if (m.san.includes('#')) ev.mate = true;
+
+            if (!kingBlock && m.piece === 'k' && color === mover && i <= 4) {
+                const enemy = color === 'w' ? 'b' : 'w';
+                const squares = board.SQUARES || [];
+                for (const sq of squares) {
+                    const p = board.get(sq);
+                    if (!p || p.type !== 'p' || p.color !== enemy) continue;
+                    const ahead = enemy === 'w' ? parseInt(m.to[1], 10) >= parseInt(sq[1], 10) : parseInt(m.to[1], 10) <= parseInt(sq[1], 10);
+                    if (ahead && squareDistance(m.to, sq) <= 1 && isPassedPawn(board, sq, enemy)) {
+                        kingBlock = { label, square: m.to, pawnSquare: sq };
+                        break;
+                    }
+                }
+            }
+            events.push(ev);
+            if (board.game_over && board.game_over()) break;
+        }
+
+        // Material ledger, from the mover's point of view.
+        // A promoted piece that is captured again counts as the pawn it was.
+        const promotedLost = [];
+        const adjGained = gained.slice();
+        const adjLost = lost.slice();
+        promotions.forEach(pr => {
+            const list = pr.color === mover ? adjLost : adjGained;
+            const idx = list.findIndex(c => c.square === pr.square && WHY_PIECE_VALUES[c.type] > 1);
+            if (idx >= 0) {
+                list.splice(idx, 1, { type: 'p', square: pr.square, label: pr.label });
+                promotedLost.push(pr);
+            }
+        });
+
+        const cancelled = cancelEqualTrades(adjGained, adjLost);
+        adjGained.length = 0; adjGained.push(...cancelled.gained);
+        adjLost.length = 0; adjLost.push(...cancelled.lost);
+
+        let ledgerText = '';
+        const lostNonPawn = adjLost.some(c => c.type !== 'p');
+        if (net <= -1 && lostNonPawn) {
+            ledgerText = adjGained.length
+                ? `gives up ${describePieces(adjLost)} for ${describePieces(adjGained)}`
+                : `gives up ${describePieces(adjLost)}`;
+        } else if (net <= -1) {
+            ledgerText = `loses ${describePieces(adjLost)}`;
+        } else if (net >= 1 && adjGained.length) {
+            ledgerText = adjLost.length
+                ? `wins ${describePieces(adjGained)} for ${describePieces(adjLost)}`
+                : `wins ${describePieces(adjGained)}`;
+        } else if (adjGained.length && adjLost.length) {
+            ledgerText = `trades ${describePieces(adjGained)} for ${describePieces(adjLost)}`;
+        }
+
+        const parts = [];
+        if (ledgerText) parts.push(ledgerText);
+        const oppPromo = promotions.find(pr => pr.color !== mover && !promotedLost.includes(pr));
+        const ownPromo = promotions.find(pr => pr.color === mover && !promotedLost.includes(pr));
+        if (ownPromo) parts.push(`promotes a pawn (${ownPromo.label})`);
+        if (oppPromo) parts.push(`${sideName(oppPromo.color)} promotes (${oppPromo.label})`);
+        if (kingBlock) parts.push(`the king steps in front of the ${kingBlock.pawnSquare[0]}-pawn (${kingBlock.label})`);
+        const mateEv = events.find(e => e.mate);
+        if (mateEv) parts.unshift(mateEv.color === mover ? `ends in checkmate (${mateEv.label})` : `gets mated (${mateEv.label})`);
+
+        return { events, gained: adjGained, lost: adjLost, net, promotions, kingBlock, ledgerText, text: parts.join('; ') };
+    }
+
+    function scoreCp(score) {
+        const Evaluator = getEvaluator();
+        return Evaluator ? Evaluator.scoreToCp(score || {}) : ((score && score.cp) || 0);
+    }
+
+    function winProb(cp) {
+        const Evaluator = getEvaluator();
+        return Evaluator ? Evaluator.cpToWinProb(cp) : 0.5;
+    }
+
+    function formatWhiteEval(score, moverColor) {
+        const Evaluator = getEvaluator();
+        const s = score || {};
+        const white = moverColor === 'w' ? s : {
+            cp: s.cp !== undefined && s.cp !== null ? -s.cp : undefined,
+            mate: s.mate !== undefined && s.mate !== null ? -s.mate : undefined
+        };
+        return Evaluator ? Evaluator.formatScore(white, 'w') : '';
+    }
+
+    /**
+     * How does the position stand before the move? (mover-POV score in, text out)
+     */
+    function describeSituation(bestScore, moverColor) {
+        const s = bestScore || {};
+        const mover = sideName(moverColor);
+        const opp = sideName(moverColor === 'w' ? 'b' : 'w');
+        const evalText = formatWhiteEval(s, moverColor);
+
+        if (s.mate !== undefined && s.mate !== null) {
+            if (s.mate > 0) return { band: 'winning', text: `${mover} has a forced mate (${evalText}).` };
+            return { band: 'losing', text: `${opp} has a forced mate (${evalText}). ${mover} can only make it as hard as possible.` };
+        }
+        const wp = winProb(scoreCp(s));
+        if (wp >= 0.90) return { band: 'winning', text: `${mover} is winning (${evalText}). The job is to convert without allowing counterplay.` };
+        if (wp >= 0.70) return { band: 'better', text: `${mover} is clearly better (${evalText}).` };
+        if (wp >= 0.57) return { band: 'slightly-better', text: `${mover} is slightly better (${evalText}).` };
+        if (wp > 0.43) return { band: 'equal', text: `The position is roughly equal (${evalText}).` };
+        if (wp > 0.30) return { band: 'slightly-worse', text: `${opp} is slightly better (${evalText}).` };
+        if (wp > 0.10) return { band: 'worse', text: `${opp} is clearly better (${evalText}). ${mover} needs to find the most stubborn defence.` };
+        return { band: 'losing', text: `${mover} is losing (${evalText}). The task is to make ${opp}'s win as hard as possible.` };
+    }
+
+    const WHY_BAND_RANK = { 'losing': 0, 'worse': 1, 'slightly-worse': 2, 'equal': 3, 'slightly-better': 4, 'better': 5, 'winning': 6 };
+
+    function countPieces(list) {
+        const order = ['q', 'r', 'b', 'n', 'p'];
+        const parts = [];
+        order.forEach(type => {
+            const n = list.filter(t => t === type).length;
+            if (n === 0) return;
+            parts.push(n === 1 ? `a ${WHY_PIECE_NAMES[type]}` : `${WHY_COUNT_WORDS[n] || n} ${WHY_PIECE_NAMES[type]}s`);
+        });
+        return joinWords(parts);
+    }
+
+    /**
+     * Who is ahead on material, in words: "Material is level", "White is up a knight",
+     * "Black has a rook for a bishop and a pawn".
+     */
+    function materialBalance(fen) {
+        if (!fen) return { diff: 0, text: '' };
+        const white = [];
+        const black = [];
+        for (const ch of fen.split(' ')[0]) {
+            const lower = ch.toLowerCase();
+            if (!WHY_PIECE_VALUES[lower]) continue;
+            (ch === lower ? black : white).push(lower);
+        }
+        const diff = white.reduce((s, t) => s + WHY_PIECE_VALUES[t], 0) - black.reduce((s, t) => s + WHY_PIECE_VALUES[t], 0);
+        if (diff === 0) return { diff, text: 'Material is level' };
+        const w = white.slice();
+        const b = black.slice();
+        for (let i = w.length - 1; i >= 0; i--) {
+            const j = b.indexOf(w[i]);
+            if (j >= 0) { w.splice(i, 1); b.splice(j, 1); }
+        }
+        const ahead = diff > 0 ? 'White' : 'Black';
+        const plus = diff > 0 ? w : b;
+        const minus = diff > 0 ? b : w;
+        const text = minus.length
+            ? `${ahead} has ${countPieces(plus)} for ${countPieces(minus)}`
+            : `${ahead} is up ${countPieces(plus)}`;
+        return { diff, text };
+    }
+
+    function bandRank(situation) {
+        const r = WHY_BAND_RANK[situation && situation.band];
+        return r === undefined ? 3 : r;
+    }
+
+    /** "slightly better", "clearly better", "winning" for the side that is ahead in this band. */
+    function bandAdjective(band) {
+        if (band === 'winning' || band === 'losing') return 'winning';
+        if (band === 'better' || band === 'worse') return 'clearly better';
+        if (band === 'slightly-better' || band === 'slightly-worse') return 'slightly better';
+        return 'equal';
+    }
+
+    /** Short "who stands how" label for one side of the before/after strip. */
+    function standingLabel(situation, moverColor) {
+        const band = situation && situation.band;
+        const rank = bandRank(situation);
+        if (band === 'equal') return 'Roughly equal';
+        const leader = sideName(rank > 3 ? moverColor : (moverColor === 'w' ? 'b' : 'w'));
+        return `${leader} ${bandAdjective(band) === 'winning' ? 'is winning' : `is ${bandAdjective(band)}`}`;
+    }
+
+    /**
+     * Bottom line up front: where the game stood before the move, where it stands
+     * after it, and one sentence that ties the two together.
+     * Scores are mover-POV, as everywhere else in diagnose().
+     */
+    function buildBluf(options) {
+        const {
+            fenBefore, san, moverColor, bestScore, playedScore,
+            isBad, playedIsBest, bestSan, refSan, playedSummary, quality
+        } = options;
+        const mover = sideName(moverColor);
+        const opp = sideName(moverColor === 'w' ? 'b' : 'w');
+        const before = describeSituation(bestScore, moverColor);
+        const after = describeSituation(playedScore, moverColor);
+        const rb = bandRank(before);
+        const ra = bandRank(after);
+        const bestMates = bestScore && bestScore.mate !== undefined && bestScore.mate !== null && bestScore.mate > 0;
+        const playedMates = playedScore && playedScore.mate !== undefined && playedScore.mate !== null && playedScore.mate > 0;
+        const oppStanding = (band) => `${opp} is now ${bandAdjective(band)}`;
+
+        let text;
+        if (bestMates && !playedMates) {
+            text = ra === 6
+                ? `${san} misses a forced mate, but ${mover} is still winning.`
+                : `${san} lets a forced mate slip: ${ra > 3 ? `${mover} is now only ${bandAdjective(after.band)}` : (ra === 3 ? 'the position is now roughly equal' : oppStanding(after.band))}.`;
+        } else if (ra >= rb || !isBad) {
+            if (bestMates) text = `${san} keeps the forced mate on track.`;
+            else if (ra === 6) text = `${san} keeps ${mover} winning.`;
+            else if (ra >= 4) text = `${san} keeps ${mover}'s edge.`;
+            else if (ra === 3) text = `${san} keeps the balance.`;
+            else if (ra >= 1) text = `${san} holds on: ${opp} keeps ${ra === 2 ? 'a small' : 'a clear'} edge, but nothing more.`;
+            else text = `${san} is ${playedIsBest ? 'the most stubborn try' : 'a fighting try'}, but ${mover} is still losing.`;
+        } else if (rb >= 4 && ra < 3) {
+            text = `${san} throws away ${mover}'s advantage: ${oppStanding(after.band)}.`;
+        } else if (rb >= 4 && ra === 3) {
+            text = `${san} lets ${mover}'s advantage slip; the position is now level.`;
+        } else if (rb >= 4) {
+            text = `${san} gives back part of the advantage: ${mover} is now ${bandAdjective(after.band)} instead of ${bandAdjective(before.band)}.`;
+        } else if (rb === 3) {
+            text = `${san} hands the advantage to ${opp}, who is now ${bandAdjective(after.band)}.`;
+        } else {
+            text = `${san} makes a difficult position worse: ${oppStanding(after.band)}.`;
+        }
+
+        // The concrete outcome of a bad move, then the better choice
+        if (isBad) {
+            let consequence = '';
+            if (playedSummary) {
+                const mateEv = playedSummary.events.find(e => e.mate);
+                const oppPromo = playedSummary.promotions.find(p => p.color !== moverColor);
+                if (mateEv && mateEv.color !== moverColor) consequence = `${mover} gets mated (${mateEv.label})`;
+                else if (playedSummary.net <= -1 && playedSummary.ledgerText) consequence = `${mover} ${playedSummary.ledgerText}`;
+                else if (oppPromo) consequence = `${opp} promotes a pawn (${oppPromo.label})`;
+            }
+            const reply = playedSummary && playedSummary.events[1];
+            const replyLabel = reply ? reply.label : refSan;
+            if (consequence && replyLabel) text += ` After ${replyLabel}, ${consequence}.`;
+            else if (consequence) text += ` In the main line, ${consequence}.`;
+            if (bestSan && !playedIsBest) text += ` Better was ${bestSan}.`;
+        }
+
+        const material = materialBalance(fenBefore);
+        return {
+            before: {
+                band: before.band,
+                label: standingLabel(before, moverColor),
+                evaluation: formatWhiteEval(bestScore, moverColor),
+                material: material.text
+            },
+            after: {
+                band: after.band,
+                label: standingLabel(after, moverColor),
+                evaluation: formatWhiteEval(playedScore, moverColor)
+            },
+            move: san,
+            quality: quality || null,
+            shift: ra > rb ? 'up' : (ra < rb ? 'down' : 'same'),
+            text
+        };
+    }
+
+    /**
+     * Build a null-move FEN (the mover "passes"), or null when that is illegal.
+     */
+    function nullMoveFen(fenBefore) {
+        const ChessCtor = getChessConstructor();
+        if (!ChessCtor || !fenBefore) return null;
+        const board = new ChessCtor(fenBefore);
+        if (board.in_check()) return null;
+        const tokens = fenBefore.split(' ');
+        if (tokens.length < 4) return null;
+        tokens[1] = tokens[1] === 'w' ? 'b' : 'w';
+        tokens[3] = '-';
+        const fen = tokens.join(' ');
+        const probe = new ChessCtor(fen);
+        if (probe.fen().split(' ')[0] !== tokens[0]) return null;
+        if (probe.moves().length === 0) return null;
+        return fen;
+    }
+
+    /**
+     * What was the opponent threatening? Compares a null-move search (opponent
+     * to move in the same position) with the real best evaluation.
+     * @param {string} fenBefore
+     * @param {object} nullEval - engine result on nullMoveFen(fenBefore): { lines: {1: {cp|mate, pv}} }
+     * @param {object} bestScore - mover-POV score of the best move
+     */
+    function describeThreat(fenBefore, nullEval, bestScore) {
+        const nullFen = nullMoveFen(fenBefore);
+        const line = nullEval && nullEval.lines && nullEval.lines[1];
+        if (!nullFen || !line || !Array.isArray(line.pv) || line.pv.length === 0) return null;
+
+        const ChessCtor = getChessConstructor();
+        const board = new ChessCtor(fenBefore);
+        const mover = board.turn();
+        const oppColor = mover === 'w' ? 'b' : 'w';
+
+        const oppNullCp = scoreCp(line);
+        const oppActualCp = -scoreCp(bestScore);
+        const gainWp = winProb(oppNullCp) - winProb(oppActualCp);
+        // WP flattens near the tails, so a big centipawn jump also counts as a real threat
+        if (gainWp < WHY_THREAT_MIN_WP && (oppNullCp - oppActualCp) < WHY_THREAT_MIN_CP) return null;
+
+        const summary = summarizeLine(nullFen, line.pv, { maxPlies: 6 });
+        const oppMoves = summary.events.filter(e => e.color === oppColor);
+        if (oppMoves.length === 0) return null;
+
+        const first = oppMoves[0];
+        const follow = oppMoves[1] && oppMoves[1].ply <= 2 ? oppMoves[1] : null;
+        let text = `${sideName(oppColor)} was threatening ${first.san}`;
+        if (follow) text += ` followed by ${follow.san}`;
+        if (summary.net >= 2 && summary.ledgerText) text += ` (${summary.ledgerText.replace(/^wins /, 'winning ')})`;
+        else if (summary.events.some(e => e.mate && e.color === oppColor)) text += ' with checkmate';
+
+        const nullEvalWhite = formatWhiteEval(line, oppColor);
+        const actualEvalWhite = formatWhiteEval(bestScore, mover);
+        text += `. If ${sideName(mover)} ignored it, the evaluation would be ${nullEvalWhite} instead of ${actualEvalWhite}.`;
+
+        return {
+            san: first.san,
+            from: first.from,
+            to: first.to,
+            fen: nullFen,
+            pv: line.pv.slice(),
+            evaluation: nullEvalWhite,
+            gainCp: oppNullCp - oppActualCp,
+            text
+        };
+    }
+
+    /**
+     * The other engine candidates, each with a verdict relative to the played
+     * move and a one-line reason drawn from its own continuation.
+     */
+    function buildAlternatives(fenBefore, lines, playedUci, playedScore) {
+        const ChessCtor = getChessConstructor();
+        if (!ChessCtor || !fenBefore || !lines) return [];
+        const board = new ChessCtor(fenBefore);
+        const mover = board.turn();
+        const opp = sideName(mover === 'w' ? 'b' : 'w');
+        const playedWp = winProb(scoreCp(playedScore));
+        const out = [];
+
+        for (let m = 1; m <= 5 && out.length < 3; m++) {
+            const line = lines[m];
+            if (!line || !Array.isArray(line.pv) || line.pv.length === 0) continue;
+            const uci = line.pv[0];
+            if (uci === playedUci) continue;
+            const san = uciToSan(board, uci);
+            if (!san || san === uci) continue;
+
+            const score = { cp: line.cp, mate: line.mate };
+            const cp = scoreCp(score);
+            const wp = winProb(cp);
+            const deltaWp = playedWp - wp;
+            let verdict;
+            if (deltaWp <= -WHY_ABOUT_EQUAL_WP) verdict = 'better';
+            else if (deltaWp < WHY_ABOUT_EQUAL_WP) verdict = 'about equal';
+            else if (deltaWp < WHY_SLIGHTLY_WORSE_WP) verdict = 'slightly worse';
+            else verdict = 'worse';
+
+            const summary = summarizeLine(fenBefore, line.pv, { maxPlies: 10 });
+            const playedMates = playedScore && playedScore.mate !== undefined && playedScore.mate !== null && playedScore.mate > 0;
+            const altMates = score.mate !== undefined && score.mate !== null && score.mate > 0;
+            if (playedMates && !altMates) {
+                summary.text = `lets ${opp} escape the forced mate` + (summary.text ? ` (${summary.text})` : '');
+            }
+            const reply = summary.events[1];
+            let reason = reply ? `${reply.label}` : '';
+            const keyEv = summary.events.find(e => e.ply >= 2 && (e.promotion || e.mate || (e.captured && e.captured !== 'p')));
+            if (keyEv && reason) reason += ` … ${keyEv.label}`;
+            if (summary.text) {
+                reason += (reason ? ' — ' : '') + summary.text;
+            } else if (verdict === 'worse' || verdict === 'slightly worse') {
+                reason += (reason ? ' — ' : '') + `gives ${opp} an easier game`;
+            } else if (verdict === 'about equal') {
+                reason += (reason ? ' — ' : '') + 'also holds a similar position';
+            }
+
+            out.push({
+                san,
+                uci,
+                from: uci.slice(0, 2),
+                to: uci.slice(2, 4),
+                evaluation: formatWhiteEval(score, mover),
+                cp,
+                wp,
+                deltaWp,
+                verdict,
+                reason,
+                pv: line.pv.slice(),
+                pvFormatted: formatPv(board, line.pv, 8),
+                lostTypes: summary.lost.filter(c => c.type !== 'p').map(c => c.type)
+            });
+        }
+        return out;
+    }
+
+    function buildVerdict(san, playedIsBest, alternatives, isBad) {
+        if (!playedIsBest) {
+            if (isBad) return null;
+            const better = alternatives.filter(a => a.verdict === 'better');
+            if (better.length === 0) {
+                return { nearTie: true, text: `${san} is as good as the engine's top choices.` };
+            }
+            return {
+                nearTie: false,
+                text: `${san} is a decent move, but ${better[0].san} (${better[0].evaluation}) was more accurate.`
+            };
+        }
+        const ties = alternatives.filter(a => a.verdict === 'about equal' || a.verdict === 'better');
+        if (ties.length > 0) {
+            const names = joinWords(ties.map(a => a.san));
+            return {
+                nearTie: true,
+                text: `${san} is the engine's top choice, but ${names} ${ties.length > 1 ? 'are' : 'is'} about as good.`
+            };
+        }
+        if (alternatives.length > 0 && alternatives.every(a => a.verdict === 'worse')) {
+            return { nearTie: false, text: `${san} is clearly the best move. Every alternative is significantly worse.` };
+        }
+        return { nearTie: false, text: `${san} is the engine's top choice.` };
+    }
+
+    /**
+     * Unified move diagnosis function.
+     *
+     * @param {object} params
+     * @param {string} params.fenBefore
+     * @param {string} [params.fenAfter]
+     * @param {object|string} params.playedMove - move object or UCI string
+     * @param {object} [params.engine] - MultiPV root search and post search
+     * @param {object} [params.context] - game context: ply, sanHistory, phase, playerElo, mode
+     * @returns {object} unified diagnosis with classification and narrative
+     */
+    function diagnose(params) {
+        const ChessCtor = getChessConstructor();
+        const Evaluator = getEvaluator();
+        const Detector = getDetector();
+        const Recognizer = getRecognizer();
+
+        const {
+            fenBefore,
+            fenAfter: passedFenAfter,
+            playedMove,
+            engine = {},
+            context = {}
+        } = params;
+
+        if (!fenBefore || !ChessCtor) {
+            throw new Error('MoveDiagnostics.diagnose requires fenBefore and a valid Chess constructor');
+        }
+
+        const boardBefore = new ChessCtor(fenBefore);
+        let moveObj = null;
+        let playedUci = '';
+
+        if (typeof playedMove === 'string') {
+            const trimmed = playedMove.trim();
+            if (/^[a-h][1-8][a-h][1-8][qrbnQRBN]?$/.test(trimmed)) {
+                playedUci = trimmed.toLowerCase();
+                const testBoard = new ChessCtor(fenBefore);
+                moveObj = testBoard.move({
+                    from: playedUci.slice(0, 2),
+                    to: playedUci.slice(2, 4),
+                    promotion: playedUci.length > 4 ? playedUci[4] : undefined
+                });
+            } else {
+                const testBoard = new ChessCtor(fenBefore);
+                moveObj = testBoard.move(trimmed, { sloppy: true });
+                if (moveObj) {
+                    playedUci = moveObj.from + moveObj.to + (moveObj.promotion || '');
+                }
+            }
+        } else if (playedMove && typeof playedMove === 'object') {
+            playedUci = (playedMove.from || '') + (playedMove.to || '') + (playedMove.promotion || '');
+            if (playedMove.san && playedMove.piece) {
+                moveObj = playedMove;
+            } else {
+                const testBoard = new ChessCtor(fenBefore);
+                moveObj = testBoard.move({
+                    from: playedMove.from,
+                    to: playedMove.to,
+                    promotion: playedMove.promotion
+                });
+            }
+        }
+
+        if (!moveObj && playedUci.length >= 4) {
+            const testBoard = new ChessCtor(fenBefore);
+            moveObj = testBoard.move({
+                from: playedUci.slice(0, 2),
+                to: playedUci.slice(2, 4),
+                promotion: playedUci.length > 4 ? playedUci[4] : undefined
+            });
+        }
+
+        const fenAfter = passedFenAfter || (() => {
+            const tb = new ChessCtor(fenBefore);
+            if (moveObj) tb.move(moveObj);
+            return tb.fen();
+        })();
+        const boardAfter = new ChessCtor(fenAfter);
+
+        // Normalize engine data
+        const preEval = engine || {};
+        const lines = preEval.lines || {};
+        const bestLine = lines[1] || { cp: 0, pv: [] };
+        const bestUci = preEval.bestUci || preEval.bestMove || (bestLine.pv && bestLine.pv[0]) || '';
+        const bestScoreObj = { cp: bestLine.cp, mate: bestLine.mate };
+        const bestSan = uciToSan(boardBefore, bestUci);
+        const bestPvFormatted = formatPv(boardBefore, bestLine.pv);
+
+        const playedIsBest = (playedUci === bestUci) || Boolean(context.verifiedBest && context.verifiedBest.uci === playedUci);
+
+        let playedScoreObj = bestScoreObj;
+        let refUci = null;
+        let refSan = null;
+        let refFrom = null;
+        let refTo = null;
+        let refPv = [];
+        let refPvFormatted = '';
+
+        const postEval = preEval.post || { bestMove: '', lines: preEval.postLines || {} };
+
+        if (playedIsBest) {
+            playedScoreObj = bestScoreObj;
+            if (bestLine.pv && bestLine.pv.length > 1) {
+                refUci = bestLine.pv[1];
+                refPv = bestLine.pv.slice(1);
+            }
+        } else {
+            let foundInMultipv = false;
+            for (let m = 1; m <= 5; m++) {
+                if (lines[m] && lines[m].pv && lines[m].pv[0] === playedUci) {
+                    playedScoreObj = { cp: lines[m].cp, mate: lines[m].mate };
+                    foundInMultipv = true;
+                    break;
+                }
+            }
+
+            const postBest = (postEval.lines && postEval.lines[1]) || {};
+            refUci = postEval.bestMove || (postBest.pv && postBest.pv[0]) || '';
+
+            if (!foundInMultipv) {
+                if (postBest.mate !== undefined) {
+                    playedScoreObj = { mate: -postBest.mate };
+                } else {
+                    playedScoreObj = { cp: -(postBest.cp || 0) };
+                }
+            }
+            if (postBest.pv) {
+                refPv = postBest.pv;
+                refPvFormatted = formatPv(boardAfter, postBest.pv);
+            }
+            if (!refUci && foundInMultipv) {
+                for (let m = 1; m <= 5; m++) {
+                    if (lines[m] && lines[m].pv && lines[m].pv[0] === playedUci && lines[m].pv.length > 1) {
+                        refUci = lines[m].pv[1];
+                        refPv = lines[m].pv.slice(1);
+                        refPvFormatted = formatPv(boardAfter, refPv);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (refUci && refUci.length >= 4) {
+            refSan = uciToSan(boardAfter, refUci);
+            refFrom = refUci.substring(0, 2);
+            refTo = refUci.substring(2, 4);
+        }
+
+        const bestCp = Evaluator ? Evaluator.scoreToCp(bestScoreObj) : (bestScoreObj.cp || 0);
+        const playedCp = Evaluator ? Evaluator.scoreToCp(playedScoreObj) : (playedScoreObj.cp || 0);
+        const wpBefore = Evaluator ? Evaluator.cpToWinProb(bestCp) : 0.5;
+        const wpAfter = Evaluator ? Evaluator.cpToWinProb(playedCp) : 0.5;
+
+        const ply = context.ply || (parseInt(fenBefore.split(' ')[5], 10) * 2 - (boardBefore.turn() === 'w' ? 1 : 0)) || 1;
+        const sanHistory = context.sanHistory || [];
+        const phase = context.phase || (Evaluator && Evaluator.gamePhase ? Evaluator.gamePhase(fenBefore) : 'middlegame');
+
+        const isBook = (Detector && Detector.isBookMove) ? Detector.isBookMove(sanHistory, ply, fenAfter) : false;
+
+        let secondBestWp = null;
+        if (playedIsBest && lines[1] && lines[1].pv && lines[1].pv[0] !== playedUci) {
+            // The played move was verified as best later, but the shallow search preferred lines[1].
+            // So lines[1] is the alternative.
+            if (lines[1]) {
+                const cp1 = Evaluator ? Evaluator.scoreToCp(lines[1]) : (lines[1].cp || 0);
+                secondBestWp = Evaluator ? Evaluator.cpToWinProb(cp1) : null;
+            }
+        } else if (lines[2]) {
+            const cp2 = Evaluator ? Evaluator.scoreToCp(lines[2]) : (lines[2].cp || 0);
+            secondBestWp = Evaluator ? Evaluator.cpToWinProb(cp2) : null;
+        }
+
+        let isSacrifice = false;
+        let offeredObj = false;
+        if (playedIsBest && Evaluator) {
+            let pvSacrifice = false;
+            let playedLinePv = null;
+            if (lines[1] && lines[1].pv && lines[1].pv[0] === playedUci) {
+                playedLinePv = lines[1].pv;
+            }
+            if (playedLinePv && Evaluator.deriveIsSacrifice) {
+                pvSacrifice = Evaluator.deriveIsSacrifice(fenBefore, playedUci, playedLinePv);
+            }
+            offeredObj = detectOfferedPiece(boardBefore, boardAfter, moveObj, Recognizer);
+            isSacrifice = !!(pvSacrifice || offeredObj);
+        }
+
+        const isOnlyMove = (Evaluator && Evaluator.deriveIsOnlyMove)
+            ? Evaluator.deriveIsOnlyMove(lines)
+            : false;
+
+        const mateMissed = (Evaluator && Evaluator.deriveMateMissed)
+            ? Evaluator.deriveMateMissed(bestScoreObj, playedScoreObj)
+            : false;
+
+        const sharpness = (Evaluator && Evaluator.positionSharpness)
+            ? Evaluator.positionSharpness(lines)
+            : 0.5;
+
+        const evalContext = {
+            phase,
+            sharpness,
+            depth: context.depth || preEval.depthPre || 16,
+            playerElo: context.playerElo
+        };
+
+        const classification = Evaluator
+            ? Evaluator.classifyMove(wpBefore, wpAfter, {
+                playedIsBest,
+                isBook,
+                isSacrifice,
+                isOnlyMove,
+                mateMissed,
+                secondBestWp,
+                context: context.adaptive ? evalContext : null
+            })
+            : { uiQuality: 'good move', detailedQuality: 'good', wpLoss: 0, confidence: 'medium' };
+
+        // What actually happens after the played move (material ledger, promotions, king blockades)
+        let playedPv = null;
+        for (let m = 1; m <= 5; m++) {
+            if (lines[m] && Array.isArray(lines[m].pv) && lines[m].pv[0] === playedUci) {
+                playedPv = lines[m].pv;
+                break;
+            }
+        }
+        if (!playedPv && playedUci) playedPv = [playedUci].concat(refPv || []);
+        const playedSummary = playedPv ? summarizeLine(fenBefore, playedPv, { maxPlies: 8 }) : null;
+
+        let explanation = '';
+        let tags = [];
+        let flaw = null;
+        let missedChance = null;
+        let betterLine = null;
+        const evidence = [];
+
+        const isBad = (classification.uiQuality === 'blunder'
+            || classification.uiQuality === 'mistake'
+            || classification.uiQuality === 'inaccuracy');
+
+        if (Recognizer) {
+            if (isBad) {
+                const opViolation = (Detector && Detector.detectOpeningPrincipleViolation)
+                    ? Detector.detectOpeningPrincipleViolation(boardBefore, moveObj, ply, { bestUci })
+                    : null;
+                const refMoveObj = (refFrom && refTo) ? { from: refFrom, to: refTo } : null;
+
+                const res = Recognizer.explainBlunderOrMistake({
+                    boardBefore,
+                    boardAfter,
+                    playedMove: moveObj,
+                    bestMove: bestUci ? {
+                        from: bestUci.substring(0, 2),
+                        to: bestUci.substring(2, 4),
+                        promotion: bestUci.length > 4 ? bestUci[4] : undefined
+                    } : null,
+                    refutationMove: refMoveObj,
+                    sanPlayed: (moveObj && moveObj.san) || playedUci,
+                    sanBest: bestSan,
+                    sanRef: refSan,
+                    bestScore: bestScoreObj,
+                    playedScore: playedScoreObj,
+                    bestPv: bestLine.pv || [],
+                    refPv,
+                    bestPvFormatted,
+                    refPvFormatted,
+                    quality: classification.uiQuality,
+                    detailedQuality: classification.detailedQuality,
+                    wpLoss: classification.wpLoss,
+                    ply,
+                    phase,
+                    openingPrincipleViolation: opViolation,
+                    isOnlyMove,
+                    isSacrifice,
+                    personaId: context.personaId,
+                    playerElo: context.playerElo,
+                    depthDial: context.depthDial
+                });
+
+                explanation = res.explanation;
+                tags = res.tags || [];
+                flaw = res.flaw;
+                missedChance = res.missedChance;
+                betterLine = res.betterLine;
+                if (opViolation && !tags.includes('Opening Principle')) {
+                    tags.push('Opening Principle');
+                }
+            } else {
+                const refMoveObj = (refFrom && refTo) ? { from: refFrom, to: refTo } : null;
+                const res = Recognizer.explainGoodMove({
+                    boardBefore,
+                    boardAfter,
+                    move: moveObj,
+                    san: (moveObj && moveObj.san) || playedUci,
+                    isBest: playedIsBest,
+                    detailedQuality: classification.detailedQuality,
+                    isOnlyMove,
+                    isSacrifice,
+                    lineSummary: playedSummary,
+                    bestScore: bestScoreObj,
+                    engineLines: lines,
+                    refutationMove: refMoveObj,
+                    sanRef: refSan,
+                    phase,
+                    ply,
+                    personaId: context.personaId,
+                    playerElo: context.playerElo,
+                    depthDial: context.depthDial
+                });
+
+                explanation = res.explanation;
+                tags = res.tags || [];
+                flaw = res.flaw;
+                missedChance = res.missedChance;
+                betterLine = res.betterLine;
+            }
+        }
+
+        const moverColor = boardBefore.turn();
+        const sanPlayedForWhy = (moveObj && moveObj.san) || playedUci;
+        const alternatives = buildAlternatives(fenBefore, lines, playedUci, playedScoreObj);
+        // "…gives up the bishop anyway": the alternative does not save what the played move gave
+        const playedLostTypes = playedSummary ? playedSummary.lost.filter(c => c.type !== 'p').map(c => c.type) : [];
+        alternatives.forEach(alt => {
+            if (alt.lostTypes.length && alt.lostTypes.some(t => playedLostTypes.includes(t)) && /gives up/.test(alt.reason)) {
+                alt.reason += ' anyway';
+            }
+        });
+        const verdict = buildVerdict(sanPlayedForWhy, playedIsBest, alternatives, isBad);
+        let ideaText = '';
+        if (playedSummary && playedSummary.text) {
+            ideaText = `${sanPlayedForWhy} ${playedSummary.text}.`;
+        } else if (!isBad && betterLine) {
+            ideaText = `${sanPlayedForWhy} ${betterLine}.`;
+        }
+        const why = {
+            verdict: verdict ? verdict.text : null,
+            nearTie: Boolean(verdict && verdict.nearTie),
+            situation: describeSituation(bestScoreObj, moverColor),
+            threat: null,
+            idea: (ideaText || (playedPv && playedPv.length > 1)) ? {
+                text: ideaText,
+                pv: playedPv ? playedPv.slice() : [],
+                pvFormatted: playedPv ? formatPv(boardBefore, playedPv, 8) : ''
+            } : null,
+            alternatives,
+            bluf: buildBluf({
+                fenBefore,
+                san: sanPlayedForWhy,
+                moverColor,
+                bestScore: bestScoreObj,
+                playedScore: playedScoreObj,
+                isBad,
+                playedIsBest,
+                bestSan,
+                refSan,
+                playedSummary,
+                quality: classification.uiQuality
+            })
+        };
+        if (engine.threat) {
+            why.threat = describeThreat(fenBefore, engine.threat, bestScoreObj);
+        }
+
+        evidence.push({
+            kind: 'classification',
+            claim: `${classification.detailedQuality} (${classification.uiQuality})`,
+            confidence: classification.confidence || 'high',
+            source: 'engine'
+        });
+
+        return {
+            classification,
+            narrative: {
+                explanation,
+                flaw,
+                missedChance,
+                betterLine,
+                tags
+            },
+            evidence,
+            explanation,
+            tags,
+            flaw,
+            missedChance,
+            betterLine,
+            isBook,
+            playedIsBest,
+            wpBefore,
+            wpAfter,
+            wpLoss: classification.wpLoss,
+            bestSan,
+            refSan,
+            bestScore: bestScoreObj,
+            playedScore: playedScoreObj,
+            sanPlayed: (moveObj && moveObj.san) || playedUci,
+            bestUci,
+            refUci,
+            refPv,
+            refPvFormatted,
+            bestPvFormatted,
+            phase,
+            sharpness,
+            why,
+            sacrificedPiece: offeredObj ? offeredObj.piece : undefined,
+            sacrificeSquare: offeredObj ? offeredObj.square : undefined
+        };
+    }
+
+    /**
+     * Compute an adaptive search budget based on game phase, position sharpness, mode, and wall-clock time.
+     * @param {object} options
+     * @param {string} [options.phase='middlegame'] - 'opening' | 'middlegame' | 'endgame'
+     * @param {number} [options.sharpness=0.5] - 0.0 to 1.0
+     * @param {string} [options.mode='analysis'] - 'analysis' | 'coach'
+     * @param {number} [options.elapsedMs=0] - milliseconds spent on this turn
+     * @param {number} [options.baseDepth=18] - base depth for analysis mode
+     * @returns {object} { depthPre, depthPost, multipv }
+     */
+    function searchBudget(options = {}) {
+        const {
+            phase = 'middlegame',
+            sharpness = 0.5,
+            mode = 'analysis',
+            elapsedMs = 0,
+            baseDepth = (mode === 'coach' ? 12 : 18)
+        } = options;
+
+        if (mode === 'coach') {
+            let depthPre = 12;
+            let depthPost = 12;
+            let multipv = 3;
+
+            // Gracefully degrade search depth under wall-clock time pressure
+            if (elapsedMs > 3500) {
+                depthPre = 8;
+                depthPost = 8;
+            } else if (elapsedMs > 1800) {
+                depthPre = 10;
+                depthPost = 10;
+            } else if (phase === 'endgame') {
+                depthPre = 14;
+                depthPost = 12;
+            }
+
+            return { depthPre, depthPost, multipv };
+        }
+
+        // Analysis mode
+        let depthPre = baseDepth;
+        let depthPost = Math.max(8, baseDepth - 2);
+        let multipv = 3;
+
+        if (phase === 'endgame') {
+            // Endgames have fewer pieces; allow deeper tactical/conversion search
+            depthPre = Math.min(22, baseDepth + 2);
+            depthPost = Math.min(20, baseDepth);
+        } else if (sharpness > 0.75) {
+            // Razor-sharp tactical positions benefit from +1 ply
+            depthPre = Math.min(22, baseDepth + 1);
+            depthPost = Math.max(8, baseDepth - 1);
+        }
+
+        return { depthPre, depthPost, multipv };
+    }
+
+    function isBrilliantCandidate(fenBefore, lines) {
+        const Evaluator = getEvaluator();
+        const Recognizer = getRecognizer();
+        const ChessCtor = getChessConstructor();
+        if (!Evaluator || !Recognizer || !ChessCtor || !lines) return false;
+
+        let bestLine = null;
+        let secondBestLine = null;
+        if (lines[1]) bestLine = lines[1];
+        if (lines[2]) secondBestLine = lines[2];
+        if (!bestLine || !bestLine.pv || bestLine.pv.length === 0) return false;
+
+        const bestUci = bestLine.pv[0];
+        const bestCp = Evaluator.scoreToCp(bestLine);
+        const wpAfter = Evaluator.cpToWinProb(bestCp);
+
+        let secondBestWp = null;
+        if (secondBestLine) {
+            const cp2 = Evaluator.scoreToCp(secondBestLine);
+            secondBestWp = Evaluator.cpToWinProb(cp2);
+        }
+
+        const BRILLIANT = Evaluator.BRILLIANT_THRESHOLDS || { maxSecondBestWp: 0.90, minWpGap: 0.05 };
+
+        if (wpAfter < 0.60) return false;
+        if (secondBestWp === null) return false;
+        if (secondBestWp >= BRILLIANT.maxSecondBestWp) return false;
+        if ((wpAfter - secondBestWp) < BRILLIANT.minWpGap) return false;
+
+        let isSacrifice = false;
+        if (Evaluator.deriveIsSacrifice && Evaluator.deriveIsSacrifice(fenBefore, bestUci, bestLine.pv)) {
+            isSacrifice = true;
+        } else {
+            const boardBefore = new ChessCtor(fenBefore);
+            const boardAfter = new ChessCtor(fenBefore);
+            const moveObj = boardAfter.move({
+                from: bestUci.slice(0, 2),
+                to: bestUci.slice(2, 4),
+                promotion: bestUci.length > 4 ? bestUci[4] : undefined
+            });
+            if (moveObj) {
+                const offeredObj = detectOfferedPiece(boardBefore, boardAfter, moveObj, Recognizer);
+                if (offeredObj) isSacrifice = true;
+            }
+        }
+
+        return isSacrifice ? { bestUci, wpAfter, secondBestWp } : false;
+    }
+
+    return {
+        diagnose,
+        uciToSan,
+        formatPv,
+        searchBudget,
+        isBrilliantCandidate,
+        summarizeLine,
+        buildAlternatives,
+        describeSituation,
+        buildBluf,
+        materialBalance,
+        describeThreat,
+        nullMoveFen,
+        _detectOfferedPiece: detectOfferedPiece
+    };
+}));

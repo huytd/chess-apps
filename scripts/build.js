@@ -6,6 +6,8 @@
 //   and the nav linking the drills.
 // - Copies chess.js (with its license) to docs/chess.js, and the Stockfish lite single-threaded WASM engine
 //   (with its GPLv3 license) to docs/stockfish.js + docs/stockfish.wasm.
+// - Bundles WhyBlunder's analysis modules (vendor/whyblunder) into docs/whyblunder.js, and copies src/patterns.js
+//   (Mistake Patterns' analysis) to docs/patterns.js.
 // Usage: npm install && npm run build
 const fs = require('fs');
 const path = require('path');
@@ -62,13 +64,18 @@ const APPS = [
     description: 'Chess visualization training: read a line of moves, picture it, then set up the final position.' },
   { src: 'src/spot-the-danger.html', out: 'spot-the-danger.html', name: 'Spot the Danger',
     description: 'Chess tactics training on master-game positions: spot the opponent\'s real threats, then the captures and checks that work for you, judged by Stockfish.' },
+  { src: 'src/mistake-patterns.html', out: 'mistake-patterns.html', name: 'Mistake Patterns',
+    description: 'Fetch your recent Lichess or Chess.com games, analyse them with Stockfish in your browser, and find the mistakes you keep making.' },
 ];
 const common = rd('src/common.css').trim();
 fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
 const sizes = [];
 for (const app of APPS) {
   const nav = '<nav class="tools" aria-label="Drills">' + APPS.map(a =>
-    `<a class="tool-tab" href="${a.out}"${a === app ? ' aria-current="page"' : ''}>${a.name}</a>`).join('') + '</nav>';
+    `<a class="tool-tab" href="${a.out}"${a === app ? ' aria-current="page"' : ''}>${a.name}</a>`).join('') + '</nav>' +
+    // on phones the tabs scroll sideways; start with the current one in view
+    '<script>(function(n){function f(){var a=n.querySelector("[aria-current]"),d=a.getBoundingClientRect().right-n.getBoundingClientRect().right;if(d>0)n.scrollLeft+=d+24;}' +
+    'f();if(document.fonts)document.fonts.ready.then(f);})(document.currentScript.previousElementSibling)</script>';
   const page = rd(app.src).replace('/*PIECES*/', () => pieces).replace('/*COMMON*/', () => common).replace('<!--NAV-->', () => nav)
     .replace('/*GAME_COUNT*/', () => games.length.toLocaleString('en-US'));
   const split = page.indexOf('</style>') + '</style>'.length;
@@ -91,6 +98,23 @@ ${page.slice(split)}
   sizes.push(`${app.out} ${(html.length / 1024).toFixed(0)} KB`);
 }
 fs.writeFileSync(path.join(root, 'docs/chess.js'), chessLib);
+
+// 4b. WhyBlunder's analysis modules, unmodified, in one scope with their own chess.js 0.10.3 (they use its API).
+//     CommonJS/AMD names are hidden so each UMD wrapper attaches to the local root, and the module names are local
+//     variables so the modules' typeof lookups find each other.
+const WB = ['chess-evaluator.js', 'opening-detector.js', 'situation-recognizer.js', 'move-diagnostics.js'];
+const WB_NAMES = ['ChessEvaluator', 'OpeningDetector', 'SituationRecognizer', 'MoveDiagnostics'];
+const wb = n => rd('vendor/whyblunder/' + n).trim();
+const wbLib = `/*! WhyBlunder analysis modules (https://github.com/huytd/whyblunder), bundled by scripts/build.js from vendor/whyblunder.
+ *  Includes chess.js 0.10.3 (BSD-2-Clause, https://github.com/jhlywa/chess.js). */
+var WhyBlunder=(function(){var module,exports,define,require,global,window;var self={};var ${WB_NAMES.join(',')};
+${wb('chess.min.js')}
+${WB.map((n, i) => `${wb(n)}\n${WB_NAMES[i]}=self.${WB_NAMES[i]};`).join('\n')}
+return {Chess:Chess,${WB_NAMES.map(n => n + ':' + n).join(',')}};})();
+if(typeof module==='object'&&module.exports)module.exports=WhyBlunder;
+`;
+fs.writeFileSync(path.join(root, 'docs/whyblunder.js'), wbLib);
+fs.copyFileSync(path.join(root, 'src/patterns.js'), path.join(root, 'docs/patterns.js'));
 
 // 5. Stockfish (single-threaded, so it runs without cross-origin isolation headers on GitHub Pages).
 //    The worker script finds its .wasm by swapping its own .js extension for .wasm.
