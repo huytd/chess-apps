@@ -124,7 +124,7 @@ function clockContext(game, ply) {
 /* engine.search(fen, depth, multipv) → Promise<{ bestMove, lines: { 1: { cp | mate, pv: [uci…] }, … } }>, scores for
    the side to move (UCI convention; mate is left undefined on centipawn lines, which WhyBlunder relies on). */
 async function analyzeGame(game, engine, opts = {}) {
-  const depth = opts.depth || 14, post = Math.max(8, depth - 2), withInacc = !!opts.inaccuracies;
+  const depth = opts.depth || 16, post = Math.max(8, depth - 2), withInacc = !!opts.inaccuracies;
   const c = new Chess(), plies = [];
   for (const san of game.sans) {
     const fenBefore = c.fen();let m;

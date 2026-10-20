@@ -128,7 +128,7 @@
 <div class="app">
   <header class="top">
     <div class="brand"><div class="brand-mark" aria-hidden="true"></div><h1>Chess Vision Lab</h1></div>
-    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">Engine depth</div><div class="seg" id="opt-depth" role="group" aria-label="Engine depth"><button data-d="10">Quick</button><button data-d="12">Normal</button><button data-d="16">Deep</button></div><p class="opt-note" id="depth-note"></p><div class="grp eyebrow">What counts</div><label class="opt" for="opt-inacc"><input type="checkbox" id="opt-inacc"><span class="txt"><b>Include inaccuracies</b><span>Count inaccuracies as well as mistakes and blunders. More examples, but more noise.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">Saved analyses</div><div class="opt"><span class="txt"><b id="cache-count">No games saved</b><span>Analysed games are kept in this browser, so running again only analyses new games.</span></span><button class="btn small" id="btn-clear-cache">Clear</button></div></div></div></div>
+    <div class="top-right"><!--NAV--><div class="settings"><button class="icon-btn" id="btn-settings" aria-expanded="false" aria-controls="settings-panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span class="lbl">Settings</span></button><div class="settings-panel" id="settings-panel" role="dialog" aria-label="Settings" hidden><div class="grp eyebrow">Engine depth</div><div class="seg" id="opt-depth" role="group" aria-label="Engine depth"><button data-d="12">Quick</button><button data-d="16">Normal</button><button data-d="18">Deep</button></div><p class="opt-note" id="depth-note"></p><div class="grp eyebrow">What counts</div><label class="opt" for="opt-inacc"><input type="checkbox" id="opt-inacc"><span class="txt"><b>Include inaccuracies</b><span>Count inaccuracies as well as mistakes and blunders. More examples, but more noise.</span></span><span class="switch" aria-hidden="true"></span></label><div class="grp eyebrow">Saved analyses</div><div class="opt"><span class="txt"><b id="cache-count">No games saved</b><span>Analysed games are kept in this browser, so running again only analyses new games.</span></span><button class="btn small" id="btn-clear-cache">Clear</button></div></div></div></div>
   </header>
 
   <main class="bench">
@@ -163,7 +163,7 @@
         <div class="intro" id="intro">
           <p><b>How it works.</b> Enter your username and pick how many recent games to look at. Each of your moves is checked by Stockfish the way <a href="https://github.com/huytd/whyblunder">WhyBlunder</a> does it: the engine's top three moves before your move, its best reply after it, and on every mistake a check of what the opponent was threatening.</p>
           <p>Every mistake and blunder is then sorted by what went wrong on the board (a piece left hanging, a fork you walked into, a tactic you missed, a threat you ignored…) and by its circumstances (time trouble, moving too fast, letting a win slip). The patterns that show up in several games are the ones to work on.</p>
-          <p>Analysis takes a few seconds per game. Analysed games are saved in this browser, so running again only checks new ones.</p>
+          <p>Analysis takes about 20 seconds per game (less on a fast computer, or with Quick in Settings). Analysed games are saved in this browser, so running again only checks new ones.</p>
         </div>
       </section>
     </div>
@@ -206,7 +206,9 @@ const speedsFor=site=>site==='chesscom'?MP.SPEEDS.filter(s=>s!=='classical'):MP.
    by the same version of the analysis. */
 const KEY='cvl-patterns-v1', MAX_SAVED=200;
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&typeof s==='object')return s;}catch(e){}return null;}
-const D=Object.assign({site:'lichess',user:'',users:{},count:20,speeds:['blitz','rapid','classical'],depth:12,inacc:false,games:{},order:[]},load()||{});
+const D=Object.assign({site:'lichess',user:'',users:{},count:20,speeds:['blitz','rapid','classical'],depth:16,inacc:false,games:{},order:[]},load()||{});
+/* The depths used to be 10/12/16 with 12 as the default; saves from then move up to the new default (16), or to Quick. */
+if(!D.depths2){D.depth=D.depth===16?16:D.depth===10?12:16;D.depths2=true;}
 function save(){
   for(;;){
     try{localStorage.setItem(KEY,JSON.stringify(D));return;}
@@ -261,7 +263,7 @@ const Pool=(function(){
       w.w.postMessage('ucinewgame');
       w.w.postMessage('setoption name MultiPV value '+j.multipv);
       w.w.postMessage('position fen '+j.fen);
-      w.w.postMessage('go depth '+j.depth+' movetime 20000');  // the time cap keeps a hard position from hanging the run
+      w.w.postMessage('go depth '+j.depth+' movetime 45000');  // the time cap keeps a hard position from hanging the run
     }
     set(workers.some(w=>w.job)?'busy':workers.some(w=>w.ready)?'ready':'loading');
   }
@@ -327,7 +329,7 @@ async function fetchChessCom(user,n,speeds,status){
 /* ---------- running an analysis ---------- */
 /* S: what's on screen. games are the fetched games (newest first), results their analyses by key, progress the
    per-game share of moves done while running. */
-const S={depth:12,games:[],results:new Map(),progress:{},agg:null,pattern:null,picked:false,ex:0,view:'move',flipped:false,status:null,running:false};
+const S={depth:16,games:[],results:new Map(),progress:{},agg:null,pattern:null,picked:false,ex:0,view:'move',flipped:false,status:null,running:false};
 let run=null;
 async function start(){
   const user=$('user').value.trim(), n=+$('count').value;
@@ -424,7 +426,7 @@ function renderForm(){
   chips.innerHTML=avail.map(s=>'<button type="button" class="btn small" data-s="'+s+'" aria-pressed="'+(D.speeds.includes(s)?'true':'false')+'"'+(S.running?' disabled':'')+'>'+SPEED_NAME[s]+'</button>').join('');
   const go=$('btn-go');go.textContent=S.running?'Stop':S.agg?'Analyse again':'Analyse games';
   for(const b of $('opt-depth').children){b.setAttribute('aria-pressed',+b.dataset.d===D.depth?'true':'false');b.disabled=S.running;}
-  $('depth-note').textContent={10:'Quick: about twice as fast, but misses some deeper tactics.',12:'Normal: a good balance for blitz and rapid games.',16:'Deep: closest to a full WhyBlunder review, and several times slower.'}[D.depth]||'';
+  $('depth-note').textContent={12:'Quick (depth 12): several times faster, but misses some deeper tactics.',16:'Normal (depth 16): reliable for blitz and rapid games, about 20 seconds a game.',18:'Deep (depth 18): the depth of a full WhyBlunder review, and about twice as slow again.'}[D.depth]||'';
   $('opt-inacc').checked=!!D.inacc;$('opt-inacc').disabled=S.running;
   const n=D.order.length;$('cache-count').textContent=n?n+' game'+(n===1?'':'s')+' saved':'No games saved';$('btn-clear-cache').disabled=!n||S.running;
 }

@@ -60,7 +60,7 @@ On top of that, **context patterns** describe the circumstances: **mistakes in t
 
 For each pattern the analysis says how often and in how many games it happened, its share of your mistakes, what it cost, when it happens (phase, colour, clock), the details that recur (which pieces you leave loose, which piece forks you, which motif you miss, which endings), how many lost games it decided, and what to work on. Each example shows the position with your move, the better move and the threat (or, under **Their reply**, the position after your move and their best answer), WhyBlunder's explanation, both lines, and a link to the game.
 
-Settings choose the engine depth (Quick 10, Normal 12, Deep 16). Analysed games are saved in the browser (up to 200), so running again only analyses new games; a link like `mistake-patterns.html?site=lichess&user=NAME` starts straight away. Stockfish runs in up to four worker threads, each searching from a fresh hash so results are repeatable.
+Settings choose the engine depth: Quick (12), Normal (16, the default, about 20 seconds a game on four workers) or Deep (18, WhyBlunder's own depth). The reply search runs 2 plies shallower, the threat search at depth 12, and every search stops after 45 seconds at most. Analysed games are saved in the browser (up to 200), so running again only analyses new games; a link like `mistake-patterns.html?site=lichess&user=NAME` starts straight away. Stockfish runs in up to four worker threads, each searching from a fresh hash so results are repeatable.
 
 ## Development
 
