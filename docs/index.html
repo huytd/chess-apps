@@ -18,7 +18,7 @@
   --bg:#F3EEE3; --surface:#FFFDF8; --surface-2:#F8F4EB; --ink:#221E18; --muted:#6F6758; --line:#E2DACB; --line-strong:#CDC3AF;
   --primary:#221E18; --primary-ink:#FFFDF8;
   --accent:#1F6B4E; --accent-ink:#FFFFFF; --accent-soft:rgba(31,107,78,.11);
-  --sq-light:#FAE7BC; --sq-dark:#C5A86F; --hl:rgba(79,182,234,.6); --co-light:#94733D; --co-dark:#FFF7E0;
+  --sq-light:#FAE7BC; --sq-dark:#C5A86F; --hl:rgba(255,186,102,.55); --co-light:#94733D; --co-dark:#FFF7E0;
   --good:#23704A; --good-soft:rgba(35,112,74,.09); --bad:#B23A2C; --bad-soft:rgba(178,58,44,.09);
   --good-solid:#2C8A55; --good-deep:#1C5C38; --bad-solid:#C8432F; --bad-deep:#86281C; --on-solid:#FFFFFF;
   --ann-g:#15781B; --ann-r:#C42B2B; --ann-b:#1F4FD0; --ann-y:#E68F00;
@@ -31,7 +31,7 @@
   --bg:#14120E; --surface:#1D1A15; --surface-2:#25211B; --ink:#EEE7D9; --muted:#A2998A; --line:#322D25; --line-strong:#463F34;
   --primary:#EEE7D9; --primary-ink:#17140F;
   --accent:#7CC6A0; --accent-ink:#0E1A14; --accent-soft:rgba(124,198,160,.14);
-  --sq-light:#FAE7BC; --sq-dark:#C5A86F; --hl:rgba(79,182,234,.6); --co-light:#94733D; --co-dark:#FFF7E0;
+  --sq-light:#FAE7BC; --sq-dark:#C5A86F; --hl:rgba(255,186,102,.55); --co-light:#94733D; --co-dark:#FFF7E0;
   --good:#6FCB96; --good-soft:rgba(111,203,150,.1); --bad:#FF7C6B; --bad-soft:rgba(255,124,107,.1);
   --good-solid:#2E9159; --good-deep:#1A5734; --bad-solid:#D04B37; --bad-deep:#7E251A;
   --shadow:0 18px 40px -28px rgba(0,0,0,.8);
@@ -41,7 +41,7 @@
   --bg:#14120E; --surface:#1D1A15; --surface-2:#25211B; --ink:#EEE7D9; --muted:#A2998A; --line:#322D25; --line-strong:#463F34;
   --primary:#EEE7D9; --primary-ink:#17140F;
   --accent:#7CC6A0; --accent-ink:#0E1A14; --accent-soft:rgba(124,198,160,.14);
-  --sq-light:#FAE7BC; --sq-dark:#C5A86F; --hl:rgba(79,182,234,.6); --co-light:#94733D; --co-dark:#FFF7E0;
+  --sq-light:#FAE7BC; --sq-dark:#C5A86F; --hl:rgba(255,186,102,.55); --co-light:#94733D; --co-dark:#FFF7E0;
   --good:#6FCB96; --good-soft:rgba(111,203,150,.1); --bad:#FF7C6B; --bad-soft:rgba(255,124,107,.1);
   --good-solid:#2E9159; --good-deep:#1A5734; --bad-solid:#D04B37; --bad-deep:#7E251A;
   --shadow:0 18px 40px -28px rgba(0,0,0,.8);
@@ -100,7 +100,7 @@ a:hover{text-decoration-color:currentColor}
 .sq .co{color:var(--co-light)}
 .sq.dk .co{color:var(--co-dark)}
 .sq::after{content:"";position:absolute;inset:1.5%;border-radius:4%;pointer-events:none;z-index:0}
-.sq.hl::after{background:var(--hl)}
+.sq.hl::after{inset:0;border-radius:0;background:var(--hl)}  /* the whole square, unlike the outlines below */
 .sq.sel::after{box-shadow:inset 0 0 0 3px var(--accent);background:var(--accent-soft)}
 .sq.bad::after{box-shadow:inset 0 0 0 3px var(--bad-solid);background:var(--bad-soft)}
 .sq[data-an]::before{content:"";position:absolute;inset:1.5%;border-radius:4%;pointer-events:none;z-index:0;background:var(--an);opacity:.6}
