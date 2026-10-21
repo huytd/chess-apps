@@ -116,6 +116,7 @@
 .ex .cap b.n{font-family:var(--f-body);font-size:inherit}
 .sw{flex:none;width:16px;height:4px;border-radius:2px;background:var(--c);transform:translateY(-3px)}
 .sw.dash{background:repeating-linear-gradient(90deg,var(--c) 0 5px,transparent 5px 8px)}
+.sw.faint{opacity:.45}
 .ex .why{color:var(--ink)}
 .ex .clock{font-size:13px;color:var(--muted)}
 .more{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:9px}
@@ -196,7 +197,7 @@
       </div>
       <div class="board-shell"><div class="board" id="board" role="grid" aria-label="Chess board"></div><svg class="arrows" id="arrows" viewBox="0 0 8 8" aria-hidden="true"></svg></div>
       <div class="board-bar" id="ex-bar" hidden>
-        <div class="seg sm" id="view" role="group" aria-label="Show on the board"><button data-v="move" title="The position before your move, with your move">Your move</button><button data-v="reply" title="The position after your move, with the opponent's best answer">Their reply</button><button data-v="best" title="The position before your move, with the engine's choice">Better move</button></div>
+        <div class="seg sm" id="view" role="group" aria-label="Show on the board"><button data-v="move" title="The position before your move, with your move and, faintly, the better one (↑ ↓ to switch)">Your move</button><button data-v="reply" title="The position after your move, with the opponent's best answer (↑ ↓ to switch)">Their reply</button><button data-v="best" title="The position before your move, with the engine's choice (↑ ↓ to switch)">Better move</button></div>
         <div class="nav-ex"><button class="btn small ghost" id="btn-prev" title="Previous example (←)" aria-label="Previous example">‹ Prev</button><span class="count" id="ex-count"></span><button class="btn small ghost" id="btn-next" title="Next example (→)" aria-label="Next example">Next ›</button></div>
       </div>
       <section class="detail" id="detail" aria-live="polite"></section>
@@ -437,14 +438,14 @@ function play(fen,uci){try{const c=new Chess(fen);c.move({from:uci.slice(0,2),to
 const boardEl=$('board'),sqEls=[];
 for(let d=0;d<64;d++){const s=document.createElement('div');s.className='sq';s.setAttribute('role','gridcell');boardEl.appendChild(s);sqEls.push(s);}
 const ARROW={played:'var(--arrow-played)',best:'var(--arrow-best)',reply:'var(--arrow-reply)',threat:'var(--arrow-threat)'};
-function arrowSvg(f,t,kind,flip){
+function arrowSvg(f,t,kind,flip,faint){
   const pt=i=>{const d=flip?63-i:i;return [d%8+.5,Math.floor(d/8)+.5];};
   const [x1,y1]=pt(f),[x2,y2]=pt(t),len=Math.hypot(x2-x1,y2-y1),ux=(x2-x1)/len,uy=(y2-y1)/len;
   const H=.42,W=.3,bx=x2-ux*H,by=y2-uy*H,r=n=>n.toFixed(3),c=ARROW[kind];
-  return '<g opacity=".82" style="fill:'+c+';stroke:'+c+'"><line x1="'+r(x1)+'" y1="'+r(y1)+'" x2="'+r(bx+ux*.02)+'" y2="'+r(by+uy*.02)+'" stroke-width=".16" stroke-linecap="round"'+(kind==='threat'?' stroke-dasharray=".2 .16"':'')+'/>'+
+  return '<g opacity="'+(faint?'.38':'.82')+'" style="fill:'+c+';stroke:'+c+'"><line x1="'+r(x1)+'" y1="'+r(y1)+'" x2="'+r(bx+ux*.02)+'" y2="'+r(by+uy*.02)+'" stroke-width=".16" stroke-linecap="round"'+(kind==='threat'?' stroke-dasharray=".2 .16"':'')+'/>'+
     '<polygon style="stroke:none" points="'+r(x2)+','+r(y2)+' '+r(bx-uy*W)+','+r(by+ux*W)+' '+r(bx+uy*W)+','+r(by-ux*W)+'"/></g>';
 }
-/* fen, arrows [{uci, kind}], highlighted move (uci), from White's side unless flip */
+/* fen, arrows [{uci, kind, faint}], highlighted move (uci), from White's side unless flip */
 function drawBoard(fen,arrows,hl,flip){
   const b=parse(fen), h=hl?[idx(hl.slice(0,2)),idx(hl.slice(2,4))]:[];
   for(let d=0;d<64;d++){
@@ -455,7 +456,7 @@ function drawBoard(fen,arrows,hl,flip){
     if(d>=56)html+='<span class="co f">'+FILES[f]+'</span>';
     el.innerHTML=html;el.setAttribute('aria-label',FILES[f]+(8-r)+(pc?' '+pc:''));
   }
-  $('arrows').innerHTML=arrows.filter(a=>a.uci&&a.uci.length>=4).map(a=>arrowSvg(idx(a.uci.slice(0,2)),idx(a.uci.slice(2,4)),a.kind,flip)).join('');
+  $('arrows').innerHTML=arrows.filter(a=>a.uci&&a.uci.length>=4).map(a=>arrowSvg(idx(a.uci.slice(0,2)),idx(a.uci.slice(2,4)),a.kind,flip,a.faint)).join('');
 }
 
 /* ---------- render ---------- */
@@ -549,7 +550,7 @@ const current=()=>S.agg&&S.agg.patterns.find(p=>p.id===S.pattern);
 function fmtLine(ply,sans){
   return sans.map((s,k)=>{const p=ply+k,n=Math.floor(p/2)+1;return p%2===0?n+'.'+s:(k===0?n+'…'+s:s);}).join(' ');
 }
-const sw=(kind,dash)=>'<i class="sw'+(dash?' dash':'')+'" style="--c:'+ARROW[kind]+'" aria-hidden="true"></i>';
+const sw=(kind,dash,faint)=>'<i class="sw'+(dash?' dash':'')+(faint?' faint':'')+'" style="--c:'+ARROW[kind]+'" aria-hidden="true"></i>';
 function renderDetail(){
   const p=current(), el=$('detail');
   $('ex-bar').hidden=!p;
@@ -567,15 +568,17 @@ function renderDetail(){
   $('ex-count').textContent=(S.ex+1)+' / '+p.items.length;
   $('btn-prev').disabled=$('btn-next').disabled=p.items.length<2;
   for(const b of $('view').children){b.setAttribute('aria-pressed',b.dataset.v===S.view?'true':'false');b.disabled=b.dataset.v!=='move'&&!has[b.dataset.v];}
-  // the board, one step of the story at a time: your move (and what they were threatening), their reply, the better move
+  // the board, one step of the story at a time: your move (and what they were threatening, and faintly the better move
+  // to compare it with), their reply, the better move
   const threat=e.threat&&e.threat.from?e.threat:null;
   if(S.view==='reply')drawBoard(play(e.fen,e.uci),[{uci:e.ref,kind:'reply'}],e.uci,flip);
   else if(S.view==='best')drawBoard(e.fen,[{uci:e.best,kind:'best'}],e.prev,flip);
-  else drawBoard(e.fen,(threat?[{uci:threat.from+threat.to,kind:'threat'}]:[]).concat({uci:e.uci,kind:'played'}),e.prev,flip);
+  else drawBoard(e.fen,(has.best?[{uci:e.best,kind:'best',faint:true}]:[]).concat(threat?[{uci:threat.from+threat.to,kind:'threat'}]:[],{uci:e.uci,kind:'played'}),e.prev,flip);
   const caps=S.view==='reply'?[sw('reply')+'<span>Their best answer: <b>'+esc(fmtLine(e.ply+1,[e.refSan||e.refLine[0]||'']))+'</b>.'+(e.refLine.length>1?' The line goes on '+esc(fmtLine(e.ply+2,e.refLine.slice(1,5)))+'.':'')+'</span>']
     :S.view==='best'?[sw('best')+'<span>Better was <b>'+esc(fmtLine(e.ply,[e.bestSan||e.bestLine[0]||'']))+'</b>, which would have kept your win chance at <b class="n">'+pct(e.wpBefore)+'</b>.</span>']
     :[sw('played')+'<span>You played <b>'+esc(e.move)+'</b>: your win chance went from <b class="n">'+pct(e.wpBefore)+'</b> to <b class="n">'+pct(e.wpAfter)+'</b>.</span>']
-      .concat(threat?[sw('threat',true)+'<span>'+esc(threat.text.split('. ')[0])+'.</span>']:[]);
+      .concat(has.best?[sw('best',false,true)+'<span>Faint: the better move, <b>'+esc(fmtLine(e.ply,[e.bestSan||e.bestLine[0]||'']))+'</b>.</span>']:[],
+        threat?[sw('threat',true)+'<span>'+esc(threat.text.split('. ')[0])+'.</span>']:[]);
   // text
   const a=p.analysis, date=g.date?new Date(g.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'';
   const link=g.url+(g.plyUrl?g.plyUrl+e.ply:'');
@@ -621,6 +624,12 @@ $('pat-list').onclick=e=>{
   S.pattern=b.dataset.p;S.picked=true;S.ex=0;S.view='move';renderPatterns();renderDetail();
   if(matchMedia('(max-width:860px)').matches)document.querySelector('.board-col').scrollIntoView({behavior:'smooth',block:'start'});
 };
+/* the next or previous view of the example (wrapping, skipping one it doesn't have) */
+function turn(d){
+  const vs=[...$('view').children].filter(b=>!b.disabled).map(b=>b.dataset.v);
+  if(!current()||vs.length<2)return false;
+  S.view=vs[(vs.indexOf(S.view)+d+vs.length)%vs.length];renderDetail();return true;
+}
 function step(d){const p=current();if(!p||p.items.length<2)return;S.picked=true;S.ex=(S.ex+d+p.items.length)%p.items.length;S.view='move';renderDetail();}
 $('btn-prev').onclick=()=>step(-1);$('btn-next').onclick=()=>step(1);
 $('view').onclick=e=>{const b=e.target.closest('button');if(!b||b.disabled)return;S.view=b.dataset.v;renderDetail();};
@@ -638,6 +647,7 @@ document.addEventListener('keydown',e=>{
   if(tag==='input'||tag==='select'||e.ctrlKey||e.metaKey||e.altKey)return;
   if(e.key==='ArrowLeft'){e.preventDefault();step(-1);}
   else if(e.key==='ArrowRight'){e.preventDefault();step(1);}
+  else if((e.key==='ArrowUp'||e.key==='ArrowDown')&&turn(e.key==='ArrowUp'?-1:1))e.preventDefault();
 });
 
 /* start-up: the last username for the chosen site, and a ?user=…&site=… link runs straight away */
