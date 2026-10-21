@@ -203,7 +203,7 @@ const PHASE_OF = fen => EV.gamePhase(fen);
 const PATTERNS = {
   'mate-allowed': { name: 'Walking into mate', kind: 'motif', blurb: 'Your move allowed a forced checkmate.' },
   'missed-mate': { name: 'Missing a forced mate', kind: 'motif', blurb: 'You had a forced checkmate and played something else.' },
-  'hanging': { name: 'Leaving pieces en prise', kind: 'motif', blurb: 'Your move left a piece that could be taken for free, or took away the defence of one.' },
+  'hanging': { name: 'Leaving pieces hanging', kind: 'motif', blurb: 'Your move left a piece that could be taken for free, or took away the defence of one.' },
   'ignored-threat': { name: 'Ignoring the opponent\'s threat', kind: 'motif', blurb: 'The opponent already had a threat, you didn\'t deal with it, and they carried it out.' },
   'fork': { name: 'Allowing forks', kind: 'motif', blurb: 'Your move let the opponent attack two pieces at once.' },
   'pin': { name: 'Allowing pins and skewers', kind: 'motif', blurb: 'Your move let the opponent pin a piece, or skewer two pieces on a line.' },
@@ -336,13 +336,15 @@ function aggregate(results) {
   const patterns = Object.values(P).filter(p => p.items.length).map(p => {
     p.items.sort((a, b) => b.e.wpLoss - a.e.wpLoss);
     p.count = p.items.length;p.gameCount = p.games.size;p.recurring = p.gameCount >= 2;
+    // the headline numbers: share of all your mistakes, average win chance lost, blunders among them
+    p.share = errors ? p.count / errors : 0;p.avg = p.cost / p.count;p.blunders = p.items.filter(x => x.e.quality === 'blunder').length;
     return p;
   }).sort((a, b) => (b.kind === 'motif') - (a.kind === 'motif') || b.recurring - a.recurring || b.cost - a.cost);
   const summary = { games, moves, errors, lost, byPhase, byQuality, accuracy: accs.length ? accs.reduce((a, b) => a + b, 0) / accs.length : null,
     wins: results.filter(g => g.result === 'win').length, losses: results.filter(g => g.result === 'loss').length };
   // a slip in the write-up must not hide the results, so a pattern whose text fails keeps its numbers and tips
   for (const p of patterns) {
-    try { p.analysis = analyse(p, summary); } catch (e) { p.analysis = { text: [`${times(p.count)} in ${p.gameCount} of your ${games} games.`], tips: TIPS[p.id] || [] }; }
+    try { p.analysis = analyse(p); } catch (e) { p.analysis = { text: [], tips: TIPS[p.id] || [] }; }
   }
   summary.insights = insights(summary, patterns, results);
   return { summary, patterns };
@@ -415,12 +417,10 @@ const TIPS = {
     'If their last move left a piece loose or the king open, look for the tactic before your plan.']
 };
 
-function analyse(p, S) {
+/* What recurs about a pattern, one short sentence each: phase, colour, the details that repeat, the clock, lost games.
+   (How often, how costly and how many blunders are numbers on the pattern: count, gameCount, share, avg, blunders.) */
+function analyse(p) {
   const items = p.items.map(x => x.e), n = items.length, out = [];
-  const avg = p.cost / n, blunders = items.filter(e => e.quality === 'blunder').length;
-  out.push(`${p.recurring ? 'Recurring' : 'Seen in one game'}: ${times(n)} in ${p.gameCount} of your ${S.games} games` +
-    (S.errors ? `, ${pct(n / S.errors)} of your mistakes` : '') + '.' +
-    (n === 1 ? ` It cost you ${pct(avg)} win chance` : ` Each cost you about ${pct(avg)} win chance on average`) + (blunders ? `, and ${blunders === n ? (n === 1 ? 'it was a blunder' : 'all were blunders') : plural(blunders, 'was a blunder', 'were blunders')}` : '') + '.');
   const phases = tally(items.map(e => e.phase));
   if (phases.length) out.push(phases.length > 1 ? `By phase: ${listText(phases, (k, c) => `${c} in the ${k}`)}.` : `${n === 1 ? 'In' : 'All in'} the ${phases[0][0]}.`);
   const colors = tally(p.items.map(x => x.game.side === 'w' ? 'White' : 'Black'));
@@ -501,15 +501,14 @@ function specifics(p, items) {
   }
   return '';
 }
-/* A few lines about the whole set: where the mistakes happen, and the patterns that cost the most. */
+/* A few lines about the whole set that the list of patterns doesn't already say: where the mistakes happen, the
+   circumstance behind many of them, and the losses a single move decided. */
 function insights(S, patterns, results) {
   const out = [];
   if (!S.moves) return out;
   const rates = PHASES.filter(ph => S.byPhase[ph].moves >= 10).map(ph => [ph, S.byPhase[ph].errors / S.byPhase[ph].moves]).sort((a, b) => b[1] - a[1]);
   if (rates.length >= 2 && rates[0][1] > 0 && rates[0][1] >= rates[rates.length - 1][1] * 1.5)
     out.push(`You make the most mistakes per move in the ${rates[0][0]} (one every ${Math.round(1 / rates[0][1])} moves) and the fewest in the ${rates[rates.length - 1][0]}${rates[rates.length - 1][1] ? ` (one every ${Math.round(1 / rates[rates.length - 1][1])})` : ''}.`);
-  const motifs = patterns.filter(p => p.kind === 'motif' && p.recurring && p.id !== 'positional');
-  if (motifs.length) out.push(`Biggest recurring problem: ${motifs[0].name.toLowerCase()}, ${times(motifs[0].count)} in ${motifs[0].gameCount} games.`);
   const ctx = patterns.filter(p => p.kind === 'context' && p.recurring).sort((a, b) => b.count - a.count)[0];
   if (ctx && ctx.count >= S.errors * 0.25) out.push(`${pct(ctx.count / S.errors)} of your mistakes fall under "${ctx.name.toLowerCase()}".`);
   const decided = results.filter(g => g.result === 'loss' && g.errors.some(e => e.wpBefore >= 0.4 && e.wpAfter < 0.3)).length;

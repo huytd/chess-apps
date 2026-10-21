@@ -41,7 +41,7 @@ Find the mistakes you keep making across your recent games.
 
 1. Pick **Lichess** or **Chess.com**, enter your username, choose how many recent games (5 to 50) and which time controls.
 2. **Analyse games** fetches them from the site's public API and checks every one of your moves with Stockfish, in your browser. Results fill in game by game; **Stop** keeps what is done so far.
-3. The patterns are listed by the win chance they cost you, recurring ones (seen in two games or more) first. Pick one to read its analysis and step through its examples on the board.
+3. Once a run starts, the form folds into a summary of whose games these are, with the progress and the list of games (**Change** opens the form again). The mistakes you repeat (seen in two games or more) come first, costliest first by the win chance they cost you, then the circumstances they happen in; once anything recurs, the patterns seen in a single game are folded away under one link. Pick a pattern to step through its examples on the board.
 
 Moves are judged the way [WhyBlunder](https://github.com/huytd/whyblunder) does it, using its own modules: a MultiPV 3 search before your move, a search for the opponent's best reply when your move wasn't the engine's choice, and `MoveDiagnostics.diagnose()` for the verdict (win-probability loss with WhyBlunder's adaptive inaccuracy, mistake and blunder bands, book moves skipped) and its explanation. On every mistake and blunder, a null-move search shows what the opponent was threatening.
 
@@ -49,7 +49,7 @@ Each mistake and blunder (inaccuracies too, if you turn them on in Settings) get
 
 - **Walking into mate**: your move allows a forced mate (back-rank mates are counted).
 - **Missing a forced mate**: you had one.
-- **Leaving pieces en prise**: the moved piece can be won (static exchange), or it was the defender of one.
+- **Leaving pieces hanging**: the moved piece can be won (static exchange), or it was the defender of one.
 - **Ignoring the opponent's threat**: they had a threat that wins material or mates, and your move left you about where passing would have, or they carried it out.
 - **Allowing forks**, **Allowing pins and skewers**, **Overlooking discovered attacks**: the opponent's best reply is one.
 - **Missing the opponent's combination**: their best line wins a piece or more by force.
@@ -58,7 +58,7 @@ Each mistake and blunder (inaccuracies too, if you turn them on in Settings) get
 
 On top of that, **context patterns** describe the circumstances: **mistakes in time trouble** (under a tenth of the base time, 10 to 60 seconds), **moving too fast** (played in 2 to 5 seconds, depending on the time control, with more than a quarter of your time left), **letting a win slip** (from 85% win chance or better to 55% or less) and **not punishing their mistakes** (the opponent's move just before had handed you 15% or more).
 
-For each pattern the analysis says how often and in how many games it happened, its share of your mistakes, what it cost, when it happens (phase, colour, clock), the details that recur (which pieces you leave loose, which piece forks you, which motif you miss, which endings), how many lost games it decided, and what to work on. Each example shows the position with your move, the better move and the threat (or, under **Their reply**, the position after your move and their best answer), WhyBlunder's explanation, both lines, and a link to the game.
+Each example plays out in three steps on the board, one arrow at a time: **Your move** (and, dashed, what the opponent was threatening), **Their reply** (their best answer) and **Better move** (the engine's choice), each with a line saying what it shows and what it did to your win chance. Below come WhyBlunder's explanation, a link to the game, and under **Engine details** the evaluations and both lines. Then the pattern itself: how often and in how many games it happened, its share of your mistakes, what it cost and how many were blunders, short notes on when it happens (phase, colour, clock), the details that recur (which pieces you leave loose, which piece forks you, which motif you miss, which endings) and how many lost games it decided, and what to work on.
 
 Settings choose the engine depth: Quick (12), Normal (16, the default, about 20 seconds a game on four workers) or Deep (18, WhyBlunder's own depth). The reply search runs 2 plies shallower, the threat search at depth 12, and every search stops after 45 seconds at most. Analysed games are saved in the browser (up to 200), so running again only analyses new games; a link like `mistake-patterns.html?site=lichess&user=NAME` starts straight away. Stockfish runs in up to four worker threads, each searching from a fresh hash so results are repeatable.
 
