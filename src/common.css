@@ -98,9 +98,9 @@ a:hover{text-decoration-color:currentColor}
 .board.editable .sq{cursor:pointer}
 .board.stamping .sq{cursor:copy}
 .board.erasing .sq{cursor:not-allowed}
-/* piece images are a square wide and 1.25 tall, base at the bottom: on the board they stand a little above the square's lower edge */
+/* piece images are a square wide and 1.25 tall, base at the bottom: on the board their base sits a sixth of the way up the square, so they read as centred */
 .pc{position:absolute;inset:0;z-index:1;background:center/contain no-repeat;pointer-events:none}
-.board .pc{inset:auto 0 9% 0;height:125%;background-size:100% 100%;filter:drop-shadow(0 3px 2px rgba(20,12,4,.35))}
+.board .pc{inset:auto 0 17% 0;height:125%;background-size:100% 100%;filter:drop-shadow(0 3px 2px rgba(20,12,4,.35))}
 .pc.lift{opacity:.25}
 .drag-ghost{position:fixed;z-index:1000;pointer-events:none;transform:translate(-50%,-50%) scale(1.1);aspect-ratio:4/5;background:center/100% 100% no-repeat;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
 .wp{background-image:var(--pc-wp)}.wn{background-image:var(--pc-wn)}.wb{background-image:var(--pc-wb)}.wr{background-image:var(--pc-wr)}.wq{background-image:var(--pc-wq)}.wk{background-image:var(--pc-wk)}
