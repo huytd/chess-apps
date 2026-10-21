@@ -2,8 +2,8 @@
 // - Validates every game line in src/games.txt with chess.js and packs each move into 2 characters
 //   (from/to square, plus a marker for promotions). The page replays a game with chess.js when it needs it.
 //   Validated lines are cached in node_modules/.cache, so only new or changed lines are re-checked.
-// - Builds one page per drill (APPS below): inlines src/common.css, the cburnett piece SVGs from chessground,
-//   and the nav linking the drills.
+// - Builds one page per drill (APPS below): inlines src/common.css, the piece image URLs and the nav linking the drills.
+// - Copies the clay piece set and the walnut board (assets/) to docs/img/.
 // - Copies chess.js (with its license) to docs/chess.js, and the Stockfish lite single-threaded WASM engine
 //   (with its GPLv3 license) to docs/stockfish.js + docs/stockfish.wasm.
 // - Bundles WhyBlunder's analysis modules (vendor/whyblunder) into docs/whyblunder.js, and copies src/patterns.js
@@ -45,13 +45,15 @@ const games = rd('src/games.txt').trim().split('\n').filter(l => l.trim() && !l.
 fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
 fs.writeFileSync(cacheFile, JSON.stringify(nextCache));
 
-// 2. Piece images
-const css = fs.readFileSync(path.join(root, 'node_modules/chessground/assets/chessground.cburnett.css'), 'utf8');
-const kind = { pawn: 'p', knight: 'n', bishop: 'b', rook: 'r', queen: 'q', king: 'k' };
+// 2. Piece and board images: copied to docs/img/, pieces exposed to the pages' CSS as --pc-wk … --pc-bp
+const imgSrc = path.join(root, 'assets');
+fs.mkdirSync(path.join(root, 'docs/img'), { recursive: true });
+fs.copyFileSync(path.join(imgSrc, 'board.webp'), path.join(root, 'docs/img/board.webp'));
 const vars = [];
-for (const m of css.matchAll(/piece\.(\w+)\.(\w+)\s*\{\s*background-image:\s*url\('([^']+)'\)/g))
-  vars.push(`--pc-${m[2] === 'white' ? 'w' : 'b'}${kind[m[1]]}:url("${m[3]}")`);
-if (vars.length !== 12) throw new Error('Expected 12 piece images, got ' + vars.length);
+for (const c of 'wb') for (const k of 'kqrbnp') {
+  fs.copyFileSync(path.join(imgSrc, 'pieces', c + k + '.webp'), path.join(root, 'docs/img', c + k + '.webp'));
+  vars.push(`--pc-${c}${k}:url("img/${c}${k}.webp")`);
+}
 const pieces = ':root{' + vars.join(';') + '}';
 
 // 3. chess.js for the browser: the CommonJS build wrapped to expose a global Chess

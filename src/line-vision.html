@@ -116,7 +116,7 @@
       </div>
     </aside>
   </main>
-  <p class="foot">Lines come from /*GAME_COUNT*/ classic master games and mainline openings. Game scores via PGN Mentor. Piece set: cburnett (GPLv2+).</p>
+  <p class="foot">Lines come from /*GAME_COUNT*/ classic master games and mainline openings. Game scores via PGN Mentor.</p>
 </div>
 
 <script src="chess.js"></script>
@@ -460,7 +460,7 @@ window.addEventListener('pointermove',e=>{
     if(!drag.piece||Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<6)return;
     drag.started=true;S.started=true;S.sel=null;
     const size=boardEl.getBoundingClientRect().width/8;
-    const gh=document.createElement('div');gh.className='drag-ghost '+drag.piece;gh.style.width=gh.style.height=size+'px';
+    const gh=document.createElement('div');gh.className='drag-ghost '+drag.piece;gh.style.width=size+'px';
     document.body.appendChild(gh);drag.ghost=gh;render();
   }
   drag.ghost.style.left=e.clientX+'px';drag.ghost.style.top=e.clientY+'px';

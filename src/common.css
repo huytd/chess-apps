@@ -1,11 +1,11 @@
 /* Shared by every drill page (scripts/build.js inlines it into each one): tokens, header, board, buttons, feedback, stats, settings, celebration effects. */
-/* Look: a chess book on a study table. Warm paper and ink, grotesque headings, mono notation, walnut board.
+/* Look: a chess book on a study table. Warm paper and ink, grotesque headings, mono notation, a clay set on a walnut board.
    Layout: board on the left, one continuous panel on the right (top card + side); on phones the panel splits around the board. */
 :root{
   --bg:#F3EEE3; --surface:#FFFDF8; --surface-2:#F8F4EB; --ink:#221E18; --muted:#6F6758; --line:#E2DACB; --line-strong:#CDC3AF;
   --primary:#221E18; --primary-ink:#FFFDF8;
   --accent:#1F6B4E; --accent-ink:#FFFFFF; --accent-soft:rgba(31,107,78,.11);
-  --sq-light:#EFE2C6; --sq-dark:#B88D63; --hl:rgba(155,185,30,.38); --board-edge:#5A4330;
+  --sq-light:#F4DEB8; --sq-dark:#374665; --hl:rgba(79,182,234,.6); --board-edge:#5C3219;
   --good:#23704A; --good-soft:rgba(35,112,74,.09); --bad:#B23A2C; --bad-soft:rgba(178,58,44,.09);
   --good-solid:#2C8A55; --good-deep:#1C5C38; --bad-solid:#C8432F; --bad-deep:#86281C; --on-solid:#FFFFFF;
   --ann-g:#15781B; --ann-r:#C42B2B; --ann-b:#1F4FD0; --ann-y:#E68F00;
@@ -18,7 +18,7 @@
   --bg:#14120E; --surface:#1D1A15; --surface-2:#25211B; --ink:#EEE7D9; --muted:#A2998A; --line:#322D25; --line-strong:#463F34;
   --primary:#EEE7D9; --primary-ink:#17140F;
   --accent:#7CC6A0; --accent-ink:#0E1A14; --accent-soft:rgba(124,198,160,.14);
-  --sq-light:#D2C09D; --sq-dark:#9C7652; --hl:rgba(170,200,50,.36); --board-edge:#0B0A08;
+  --sq-light:#F4DEB8; --sq-dark:#374665; --hl:rgba(79,182,234,.6); --board-edge:#3E2110;
   --good:#6FCB96; --good-soft:rgba(111,203,150,.1); --bad:#FF7C6B; --bad-soft:rgba(255,124,107,.1);
   --good-solid:#2E9159; --good-deep:#1A5734; --bad-solid:#D04B37; --bad-deep:#7E251A;
   --shadow:0 18px 40px -28px rgba(0,0,0,.8);
@@ -28,7 +28,7 @@
   --bg:#14120E; --surface:#1D1A15; --surface-2:#25211B; --ink:#EEE7D9; --muted:#A2998A; --line:#322D25; --line-strong:#463F34;
   --primary:#EEE7D9; --primary-ink:#17140F;
   --accent:#7CC6A0; --accent-ink:#0E1A14; --accent-soft:rgba(124,198,160,.14);
-  --sq-light:#D2C09D; --sq-dark:#9C7652; --hl:rgba(170,200,50,.36); --board-edge:#0B0A08;
+  --sq-light:#F4DEB8; --sq-dark:#374665; --hl:rgba(79,182,234,.6); --board-edge:#3E2110;
   --good:#6FCB96; --good-soft:rgba(111,203,150,.1); --bad:#FF7C6B; --bad-soft:rgba(255,124,107,.1);
   --good-solid:#2E9159; --good-deep:#1A5734; --bad-solid:#D04B37; --bad-deep:#7E251A;
   --shadow:0 18px 40px -28px rgba(0,0,0,.8);
@@ -47,7 +47,7 @@ a:hover{text-decoration-color:currentColor}
 /* header */
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px 24px;flex-wrap:wrap;padding-bottom:12px;border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:11px}
-.brand-mark{width:34px;height:34px;border-radius:9px;flex:none;background:#2A2119 var(--pc-wn) center/78% no-repeat;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.brand-mark{width:34px;height:34px;border-radius:9px;flex:none;background:#2A2119 var(--pc-wn) center bottom/auto 112% no-repeat;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
 .brand h1{font-family:var(--f-display);font-weight:800;font-size:21px;letter-spacing:-.01em;margin:0}
 .top-right{display:flex;align-items:center;gap:6px 20px;flex-wrap:wrap}
 .tools{display:flex;gap:22px;flex-wrap:wrap}
@@ -73,31 +73,34 @@ a:hover{text-decoration-color:currentColor}
 
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px}
 .eyebrow{font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--muted)}
-/* board */
-.board-shell{width:100%;max-width:min(640px, calc(100vh - 140px));min-width:min(100%, 280px);margin:0 auto;position:relative;border-radius:6px;
-  padding:0;box-shadow:0 0 0 5px var(--board-edge), 0 0 0 6px rgba(0,0,0,.15), 0 30px 50px -30px rgba(40,25,10,.7)}
-.board{display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1;width:100%;max-width:100%;border-radius:3px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
-.sq{position:relative;background:var(--sq-light)}
-.sq.dk{background:var(--sq-dark)}
+/* board: img/board.webp is a walnut frame 56px wide around 8 clay tiles on a 132px pitch, so the frame is 5.3% of the playing area.
+   The shell is the playing area; the frame and its front edge are drawn around it. Pieces stand taller than their square. */
+.board-shell{--w:min(100% / 1.106, 579px, (100vh - 140px) / 1.106);width:var(--w);min-width:min(100% / 1.106, 253px);margin:calc(var(--w) * .053) auto calc(var(--w) * .053 + 8px);position:relative;isolation:isolate}
+.board-shell::before{content:"";position:absolute;inset:-5.3%;z-index:-1;border-radius:2.8%;background:url("img/board.webp") center/100% 100%;
+  box-shadow:0 7px 0 var(--board-edge), 0 30px 46px -24px rgba(40,25,10,.75)}
+.board{display:grid;grid-template-columns:repeat(8,1fr);aspect-ratio:1;width:100%;max-width:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+.sq{position:relative}
 .sq .co{position:absolute;font-family:var(--f-body);font-size:clamp(8px,1.4vw,11px);font-weight:700;line-height:1;pointer-events:none}
 .sq .co.f{right:4px;bottom:3px}
 .sq .co.r{left:4px;top:4px}
 .sq .co{color:var(--sq-dark)}
 .sq.dk .co{color:var(--sq-light)}
-.sq::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:0}
+.sq::after{content:"";position:absolute;inset:1.5%;border-radius:4%;pointer-events:none;z-index:0}
 .sq.hl::after{background:var(--hl)}
 .sq.sel::after{box-shadow:inset 0 0 0 3px var(--accent);background:var(--accent-soft)}
 .sq.bad::after{box-shadow:inset 0 0 0 3px var(--bad-solid);background:var(--bad-soft)}
-.sq[data-an]::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:var(--an);opacity:.6}
+.sq[data-an]::before{content:"";position:absolute;inset:1.5%;border-radius:4%;pointer-events:none;z-index:0;background:var(--an);opacity:.6}
 .sq[data-an="g"]{--an:var(--ann-g)}.sq[data-an="r"]{--an:var(--ann-r)}.sq[data-an="b"]{--an:var(--ann-b)}.sq[data-an="y"]{--an:var(--ann-y)}
 .arrows{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;overflow:visible}
-.board-shell:has(.board.solved){box-shadow:0 0 0 5px var(--good-solid), 0 0 0 6px rgba(0,0,0,.15), 0 30px 50px -30px rgba(40,25,10,.7)}
+.board-shell:has(.board.solved)::before{box-shadow:0 0 0 5px var(--good-solid), 0 9px 0 var(--good-deep), 0 30px 46px -24px rgba(40,25,10,.75)}
 .board.editable .sq{cursor:pointer}
 .board.stamping .sq{cursor:copy}
 .board.erasing .sq{cursor:not-allowed}
-.pc{position:absolute;inset:0;z-index:1;background-size:100% 100%;background-repeat:no-repeat;pointer-events:none}
+/* piece images are a square wide and 1.25 tall, base at the bottom: on the board they stand a little above the square's lower edge */
+.pc{position:absolute;inset:0;z-index:1;background:center/contain no-repeat;pointer-events:none}
+.board .pc{inset:auto 0 9% 0;height:125%;background-size:100% 100%;filter:drop-shadow(0 3px 2px rgba(20,12,4,.35))}
 .pc.lift{opacity:.25}
-.drag-ghost{position:fixed;z-index:1000;pointer-events:none;transform:translate(-50%,-50%) scale(1.1);background-size:100% 100%;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
+.drag-ghost{position:fixed;z-index:1000;pointer-events:none;transform:translate(-50%,-50%) scale(1.1);aspect-ratio:4/5;background:center/100% 100% no-repeat;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35))}
 .wp{background-image:var(--pc-wp)}.wn{background-image:var(--pc-wn)}.wb{background-image:var(--pc-wb)}.wr{background-image:var(--pc-wr)}.wq{background-image:var(--pc-wq)}.wk{background-image:var(--pc-wk)}
 .bp{background-image:var(--pc-bp)}.bn{background-image:var(--pc-bn)}.bb{background-image:var(--pc-bb)}.br{background-image:var(--pc-br)}.bq{background-image:var(--pc-bq)}.bk{background-image:var(--pc-bk)}
 .board-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;max-width:min(640px, calc(100vh - 140px));width:100%;margin:0 auto;min-height:34px}
@@ -156,7 +159,7 @@ a:hover{text-decoration-color:currentColor}
 /* after-check animations */
 @keyframes wave{0%{transform:none}40%{transform:translateY(-18%) scale(1.12) rotate(-4deg)}75%{transform:translateY(3%) scale(.97)}100%{transform:none}}
 .pc.wave{animation:wave .32s cubic-bezier(.3,.7,.4,1) both}
-.board-shell::after{content:"";position:absolute;inset:0;border-radius:6px;pointer-events:none;opacity:0;z-index:4}
+.board-shell::after{content:"";position:absolute;inset:-5.3%;border-radius:2.8%;pointer-events:none;opacity:0;z-index:4}
 @keyframes flashfx{0%{opacity:.5}100%{opacity:0}}
 .board-shell.flash-good::after{background:var(--good-solid);animation:flashfx .35s ease-out}
 .board-shell.flash-bad::after{background:var(--bad-solid);animation:flashfx .35s ease-out}

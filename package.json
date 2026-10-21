@@ -7,7 +7,6 @@
   },
   "devDependencies": {
     "chess.js": "1.4.0",
-    "chessground": "9.1.1",
     "stockfish": "19.0.0"
   }
 }

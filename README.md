@@ -66,12 +66,12 @@ Settings choose the engine depth: Quick (12), Normal (16, the default, about 20 
 
 ```sh
 npm install
-npm run build   # writes docs/: index.html, spot-the-danger.html, mistake-patterns.html, games.js, chess.js, whyblunder.js, patterns.js, stockfish.js + .wasm
+npm run build   # writes docs/: index.html, img/, spot-the-danger.html, mistake-patterns.html, games.js, chess.js, whyblunder.js, patterns.js, stockfish.js + .wasm
 ```
 
 - `src/line-vision.html`, `src/spot-the-danger.html`, `src/mistake-patterns.html` — page sources (CSS + JS), one per app. The build fills in `/*PIECES*/`, `/*COMMON*/` (`src/common.css`, styles shared by every drill), `<!--NAV-->` (links between drills) and `/*GAME_COUNT*/`. To add a drill, add its page to `APPS` in `scripts/build.js`.
 - `src/games.txt` — one line per source: `Name|1.e4 e5 2.Nf3 ...` (about 5,000 games). Names containing ` vs ` are shown as games, the rest as opening lines.
-- `scripts/build.js` — validates every move with chess.js and packs each game into `docs/games.js` at 2 characters per move; the page replays only the game it shows. Validated lines are cached in `node_modules/.cache`, so the first build takes under a minute and later ones are instant. Also inlines piece images, copies chess.js to `docs/chess.js`, and copies the Stockfish.js lite single-threaded WASM engine to `docs/stockfish.js` + `docs/stockfish.wasm` (single-threaded, so it needs no cross-origin isolation headers; about 1.8 MB).
+- `scripts/build.js` — validates every move with chess.js and packs each game into `docs/games.js` at 2 characters per move; the page replays only the game it shows. Validated lines are cached in `node_modules/.cache`, so the first build takes under a minute and later ones are instant. Also copies the piece and board images (`assets/`) to `docs/img/`, chess.js to `docs/chess.js`, and copies the Stockfish.js lite single-threaded WASM engine to `docs/stockfish.js` + `docs/stockfish.wasm` (single-threaded, so it needs no cross-origin isolation headers; about 1.8 MB).
 
 - `src/patterns.js` — Mistake Patterns' analysis: game import, per-game analysis, pattern detection and the write-up. Copied to `docs/patterns.js`. It also runs in Node: `require('./src/patterns.js')(Chess, require('./docs/whyblunder.js'))`, with any engine that has `search(fen, depth, multipv)`.
 - `vendor/whyblunder/` — WhyBlunder's analysis modules, unmodified (see its README for the commit). The build bundles them with their own chess.js 0.10.3 into `docs/whyblunder.js`, which exposes one global, `WhyBlunder`.
@@ -84,7 +84,7 @@ GitHub Pages serves `docs/` from the `main` branch (Settings → Pages → Deplo
 
 ## Credits
 
-Piece set: cburnett, via [chessground](https://github.com/lichess-org/chessground) (GPLv2+).
+Pieces and board: the clay set and walnut board in `assets/` (the build copies them to `docs/img/`).
 
 Game scores: [PGN Mentor](https://www.pgnmentor.com/files.html) player collections (Morphy through Carlsen; classical games before 2016, 30–100 half-moves).
 
