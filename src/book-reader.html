@@ -108,6 +108,36 @@
 .handle::after{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#2C8A55}
 .handle:active{cursor:grabbing}
 @media (max-width:860px){.status{padding-top:0}}
+
+/* layout: the page being read gets the big column, the board the other; on phones just the page and the board, with
+   everything else folded under Tools */
+.app{max-width:1440px}
+.reader{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-areas:"line board" "line side";grid-template-rows:auto 1fr;gap:16px 28px}
+.reader > .line-card{border-radius:16px;border-bottom:1px solid var(--line);box-shadow:var(--shadow);padding:14px;align-self:start}
+.reader > .line-card::after{display:none}
+.reader .side{border-top:1px solid var(--line);border-radius:16px;padding-top:4px;align-self:start}
+.reader .board-shell{--w:min(100% / 1.112, 576px, (100vh - 150px) / 1.112)}
+.reader .page-head{margin-top:0}
+.page-open{flex:none}
+.tool-box > summary{display:none}
+.tool-box > .card{background:transparent;border:0;border-radius:0;padding:16px 0 0;border-top:1px solid var(--line);box-shadow:none}
+.tool-box > .card:first-of-type{border-top:0}
+.tool-box{display:flex;flex-direction:column;gap:0;padding-bottom:4px}
+@media (max-width:860px){
+  .app{gap:10px;padding-top:8px}
+  .top{padding-bottom:8px}
+  .reader{grid-template-columns:minmax(0,1fr);grid-template-areas:"line" "board" "side";grid-template-rows:auto;gap:10px}
+  .reader > .line-card{margin:0 -8px;padding:10px 8px;border-radius:12px}
+  .reader .side{padding:0 16px;border-radius:12px}
+  .tool-box > summary{display:flex;align-items:baseline;gap:10px;padding:13px 0;cursor:pointer;list-style:none;font-weight:600;font-size:14.5px}
+  .tool-box > summary::-webkit-details-marker{display:none}
+  .tool-box > summary::before{content:"";flex:none;width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(-45deg);transition:transform .15s}
+  .tool-box[open] > summary::before{transform:translateY(-3px) rotate(45deg)}
+  .tool-box > summary .sum-note{font-weight:400;font-size:12.5px;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .tool-box[open]{padding-bottom:16px}
+  #c-how,.foot,.drop-hint,.side.empty{display:none}
+}
 </style>
 
 <div class="app">
@@ -116,7 +146,7 @@
     <div class="top-right"><!--NAV--></div>
   </header>
 
-  <main class="bench">
+  <main class="bench reader">
     <section class="card line-card src" id="src" aria-label="The page">
       <div id="intro">
         <h2>Read the diagrams in a book</h2>
@@ -129,8 +159,9 @@
       <input type="file" id="file" accept="image/*,application/pdf" hidden>
       <input type="file" id="camera" accept="image/*" capture="environment" hidden>
       <p class="drop-hint" id="drop-hint">Or drop a file here, or paste a screenshot (Ctrl+V).</p>
+      <div class="status" id="status"></div>
       <div id="page" hidden>
-        <div class="page-head"><span class="name" id="page-name"></span>
+        <div class="page-head"><div class="row page-open"><button class="btn small" id="btn-open2" type="button" title="Open another page">Open</button><button class="btn small ghost" id="btn-camera2" type="button" title="Take a photo of a page">Photo</button></div><span class="name" id="page-name"></span>
           <div class="pdf-nav" id="pdf-nav" hidden><button class="btn small ghost" id="pdf-prev" aria-label="Previous page">‹</button><span class="count" id="pdf-count"></span><button class="btn small ghost" id="pdf-next" aria-label="Next page">›</button></div></div>
         <div class="page-view" id="page-view"><canvas id="page-canvas"></canvas><svg id="page-svg" aria-label="Diagrams found on the page"></svg></div>
         <div class="found"><p id="found-msg" aria-live="polite"></p><button class="btn small" id="btn-add" type="button" title="Place a board's corners yourself">Add a board</button></div>
@@ -150,7 +181,8 @@
     </div>
 
     <aside class="side">
-      <div class="status" id="status"></div>
+     <details class="tool-box" id="tools" open>
+      <summary><span>Tools</span><span class="sum-note" id="sum-note">fix squares, who's to move, Stockfish, FEN</span></summary>
       <div class="card" id="c-printed" hidden>
         <div class="printed"><canvas id="crop" width="256" height="256" aria-label="The diagram as printed"></canvas><p id="printed-msg"></p></div>
       </div>
@@ -178,6 +210,7 @@
         <b class="eyebrow">How it works</b>
         <p class="howto-p" style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">The page is searched for chessboards, and each square of each diagram is read by the small neural network from <a href="https://github.com/huytd/watchchess3d">Watch Chess in 3D</a>. Nothing is uploaded. Photos work best taken square-on, in good light, with the whole diagram in the frame.</p>
       </div>
+     </details>
     </aside>
   </main>
   <p class="foot">Diagram reading from <a href="https://github.com/huytd/watchchess3d">Watch Chess in 3D</a>'s square classifier; evaluations by <a href="https://github.com/nmrugg/stockfish.js">Stockfish.js</a> (GPLv3); PDFs opened with <a href="https://mozilla.github.io/pdf.js/">PDF.js</a>. All in your browser.</p>
@@ -505,6 +538,7 @@ function renderEngine(){
   const v=shown(), d=curD(), box=$('c-engine');
   box.hidden=!d;
   if(!d)return;
+  $('sum-note').textContent='fix squares, who\'s to move, Stockfish, FEN';
   const chip=$('engine-chip');
   const okPos=S.ply||chessOf(d.board,d.turn);
   chip.className='engine-chip '+(E.state==='error'?'error':E.state==='busy'?'busy':E.state==='loading'?'loading':'ready');
@@ -519,6 +553,7 @@ function renderEngine(){
   if(E.mate!=null){const m=E.mate*sgn;txt=(m>0?'+':'−')+'M'+Math.abs(E.mate);frac=m>0?1:0;}
   else{const cp=E.score*sgn;txt=(cp>0?'+':cp<0?'−':'')+(Math.abs(cp)/100).toFixed(2);frac=1/(1+Math.exp(-cp/250));}
   $('eval').textContent=txt;$('evalbar').style.width=(frac*100).toFixed(1)+'%';
+  $('sum-note').textContent='Stockfish '+txt+' · fix squares, who\'s to move, FEN';
   // the line in SAN, numbered from the position
   const g=new Chess(v.fen), parts=[];
   let n=1, first=true;
@@ -536,7 +571,7 @@ function render(){renderSource();renderPanel();drawBoard();renderEngine();}
 function renderSource(){
   const P=S.page;
   $('page').hidden=!P;$('intro').hidden=!!P;$('drop-hint').hidden=!!P;
-  $('btn-open').textContent=P?'Open another':'Open a page';
+  document.querySelector('.open-row').hidden=!!P;
   if(!P)return;
   $('page-name').textContent=P.name;
   $('pdf-nav').hidden=!P.pdf;
@@ -560,6 +595,7 @@ function renderPanel(){
   const d=curD(), v=shown();
   for(const id of ['c-printed','c-turn','c-fix','c-fen'])$(id).hidden=!d;
   $('c-how').hidden=!!d;
+  document.querySelector('.side').classList.toggle('empty',!d);
   $('btn-corners').hidden=!d;$('btn-flip').disabled=!d;
   $('legend').hidden=!d||!!S.ply||!d.unsure.size;
   $('btn-back').disabled=!S.ply;$('btn-reset').disabled=!S.ply;
@@ -649,6 +685,12 @@ window.addEventListener('resize',()=>{if(!$('modal').hidden)sizeModal();});
 /* ---------- events ---------- */
 $('btn-open').onclick=()=>$('file').click();
 $('btn-camera').onclick=()=>$('camera').click();
+$('btn-open2').onclick=()=>$('file').click();
+$('btn-camera2').onclick=()=>$('camera').click();
+/* phones: Tools start folded; wider screens always show them */
+const narrow=matchMedia('(max-width:860px)');
+const foldTools=()=>{$('tools').open=!narrow.matches;};
+foldTools();if(narrow.addEventListener)narrow.addEventListener('change',foldTools);
 $('file').onchange=e=>{openFile(e.target.files[0]);e.target.value='';};
 $('camera').onchange=e=>{openFile(e.target.files[0]);e.target.value='';};
 $('pdf-prev').onclick=()=>{if(!S.busy)showPdfPage(S.page.pageNo-1);};
