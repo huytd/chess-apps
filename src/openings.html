@@ -1,0 +1,435 @@
+<title>Opening Learner · Chess Vision Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/*PIECES*/
+/*COMMON*/
+/* Opening Learner: a row of stacked panes under the header, like Andy Matuschak's notes. The first pane lists the
+   openings; picking one opens its line to the right, and each variation opens in a pane to the right of the line it
+   branches from. Panes that no longer fit slide under their neighbour and leave a spine with their title. */
+:root{--spine:44px;--pw:468px;--iw:356px;--head-h:72px}
+html,body{height:100%}
+body{overflow:hidden}
+.app{max-width:none;padding-bottom:0;gap:0;padding-left:max(18px, env(safe-area-inset-left, 0px));padding-right:max(18px, env(safe-area-inset-right, 0px))}
+.top{border-bottom:0}
+
+.stack{display:flex;align-items:stretch;height:calc(100vh - var(--head-h));height:calc(100dvh - var(--head-h));overflow-x:auto;overflow-y:hidden;
+  border-top:1px solid var(--line);overscroll-behavior-x:contain;scrollbar-width:thin}
+.pane{flex:none;width:var(--pw);height:100%;position:sticky;left:calc(var(--k) * var(--spine));background:var(--surface);
+  border-right:1px solid var(--line);box-shadow:-10px 0 24px -18px rgba(40,25,10,.45)}
+.pane.index{width:var(--iw);background:var(--surface-2);box-shadow:none}
+.pane-body{height:100%;overflow-y:auto;overscroll-behavior:contain;transition:opacity .15s}
+.spine{position:absolute;left:0;top:0;bottom:0;width:var(--spine);display:none;align-items:flex-start;justify-content:center;padding:16px 0;border:0;border-right:1px solid var(--line);
+  background:inherit;cursor:pointer;z-index:5;color:var(--muted);font:600 14px var(--f-body);text-align:left}
+.spine span{writing-mode:vertical-rl;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-height:100%}
+.spine:hover{color:var(--ink);background:var(--surface-2)}
+.pane.collapsed .spine{display:flex}
+.pane.collapsed .pane-body{opacity:0;pointer-events:none}
+.hint-pane{flex:1 0 260px;display:grid;place-items:center;padding:24px;color:var(--muted);font-size:14px;text-align:center}
+.hint-pane p{max-width:34ch;margin:0}
+.hint-pane b{display:block;font-family:var(--f-display);font-size:19px;color:var(--ink);margin-bottom:6px}
+
+/* the list of openings */
+.index .pane-body{padding:18px 18px 28px}
+.index h2{margin:0;font-family:var(--f-display);font-weight:800;font-size:24px;line-height:1.15;letter-spacing:-.015em}
+.index .lede{margin:6px 0 14px;font-size:13.5px;color:var(--muted)}
+.find{display:flex;flex-direction:column;gap:8px;position:sticky;top:-18px;z-index:2;margin:0 -18px;padding:10px 18px;background:var(--surface-2)}
+.find input{font:inherit;font-size:15px;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:10px;padding:9px 12px;width:100%}
+.find input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips .btn{padding:5px 11px;font-size:13px;border-radius:999px}
+.chips .btn[aria-pressed="false"]{color:var(--muted)}
+.group{margin-top:18px}
+.group > h3{margin:0 0 6px;display:flex;justify-content:space-between;gap:8px}
+.group > h3 small{font-family:var(--f-mono);font-size:11px;letter-spacing:0;text-transform:none;color:var(--muted);font-weight:400}
+.op{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;padding:10px 12px;margin:0 0 6px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer;transition:border-color .12s, box-shadow .12s}
+.op:hover{border-color:var(--line-strong)}
+.op[aria-current="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.op .nm{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-weight:600;font-size:15px}
+.op .nm small{flex:none;font-weight:500;font-size:11.5px;color:var(--muted)}
+.op .mv{font-family:var(--f-mono);font-size:12.5px;color:var(--accent)}
+.op .sum{font-size:13px;color:var(--muted);line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.none{font-size:14px;color:var(--muted);margin:18px 0}
+.credit{margin:22px 0 0;font-size:12px;color:var(--muted)}
+
+/* a line: its title, the board (stays in view while the notes scroll), the idea, every move with its note, the variations */
+.line .pane-body{scroll-padding-top:var(--board-h,0px)}
+.pane-head{padding:16px 20px 10px}
+.crumbs{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:30px}
+.crumbs .eyebrow{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crumbs .row{flex:none;gap:2px}
+.back{display:none}
+.x{width:30px;height:30px;padding:0;border-radius:50%;font-size:18px;line-height:1}
+.pane-head h2{margin:4px 0 0;font-family:var(--f-display);font-weight:800;font-size:23px;line-height:1.15;letter-spacing:-.015em}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tag{font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--muted)}
+.tag.side-w{background:#FFFDF8;color:#221E18;border-color:var(--line-strong)}
+.tag.side-b{background:#221E18;color:#FFFDF8;border-color:#221E18}
+.from{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.from button{font:inherit;color:var(--ink);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
+.pane-board{position:sticky;top:0;z-index:3;background:var(--surface);padding:6px 20px 8px;border-bottom:1px solid var(--line)}
+.pane-board .board-shell{--w:min(100% / 1.112, 284px, (100dvh - var(--head-h) - 380px) / 1.112);margin-top:calc(var(--w) * .062)}
+.pane-board .board{touch-action:pan-x pan-y;cursor:pointer}
+.pane-board .board-bar{min-height:30px}
+.pane-board .board-bar:first-child{margin-bottom:4px}
+.pane-board .board-bar:last-child{margin-top:4px}
+.now{font-family:var(--f-mono);font-size:14px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now small{font-family:var(--f-body);font-weight:500;font-size:12.5px;color:var(--muted)}
+.steps{display:flex;align-items:center;gap:4px}
+.steps .count{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);min-width:6ch;text-align:center;font-variant-numeric:tabular-nums}
+.steps .btn{min-width:34px}
+.sec{padding:16px 20px 4px}
+.sec > h3{margin:0 0 8px}
+.idea p{margin:0 0 10px;font-size:14.5px}
+.prefix{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:baseline;margin:0 0 10px;padding:8px 10px;border-radius:10px;background:var(--surface-2);font-family:var(--f-mono);font-size:13px}
+.prefix > span{font-family:var(--f-body);font-size:12px;color:var(--muted);margin-right:4px}
+.pm{border:0;background:none;padding:1px 4px;border-radius:5px;font:inherit;color:var(--muted);cursor:pointer}
+.pm:hover{color:var(--ink);background:var(--accent-soft)}
+.pm.cur{background:var(--accent);color:var(--accent-ink)}
+.mrow{display:grid;grid-template-columns:84px minmax(0,1fr);gap:0 10px;width:100%;text-align:left;padding:8px 10px;margin:0 -10px;width:calc(100% + 20px);border:0;border-radius:10px;background:none;cursor:pointer;font-size:14px;line-height:1.5}
+.mrow:hover{background:var(--surface-2)}
+.mrow .san{font-family:var(--f-mono);font-weight:600;font-size:14px;white-space:nowrap}
+.mrow .san i{font-style:normal;color:var(--muted);font-weight:400}
+.mrow .note{color:var(--muted)}
+.mrow.cur{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.mrow.cur .note{color:var(--ink)}
+.mrow.later .san{color:var(--muted)}
+.alts{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 8px 94px;font-size:12px;color:var(--muted)}
+.alt{display:inline-flex;align-items:baseline;gap:6px;padding:4px 10px;border-radius:999px;border:1px dashed var(--line-strong);background:var(--surface);font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;max-width:100%}
+.alt b{font-family:var(--f-mono);font-weight:600;color:var(--accent)}
+.alt span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.alt:hover{border-style:solid;border-color:var(--accent)}
+.alt[aria-current="true"],.var[aria-current="true"]{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
+.vars{display:flex;flex-direction:column;gap:8px;padding-bottom:24px}
+.var{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;width:100%;text-align:left;padding:11px 13px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+.var:hover{border-color:var(--line-strong)}
+.var .vn{font-weight:600;font-size:14.5px}
+.var .vn b{font-family:var(--f-mono);color:var(--accent);margin-right:6px}
+.var .vs{grid-column:1;font-size:13px;color:var(--muted);line-height:1.45}
+.var .go{grid-row:1 / span 2;grid-column:2;color:var(--muted);font-size:18px}
+.var .deep{font-size:11.5px;color:var(--muted);font-weight:500;margin-left:4px}
+.end{padding:4px 20px 28px;font-size:13px;color:var(--muted)}
+
+/* phones: one pane at a time, side by side; swipe or ‹ to go back, a variation slides in from the right */
+@media (max-width:720px){
+  :root{--pw:100vw;--iw:100vw}
+  body{font-size:14.5px}
+  .app{padding-top:8px}
+  .top{padding-bottom:8px}
+  .stack{scroll-snap-type:x mandatory}
+  .pane{position:relative;left:auto;scroll-snap-align:start;scroll-snap-stop:always;border-right:0;box-shadow:none}
+  .pane.collapsed .pane-body{opacity:1;pointer-events:auto}
+  .pane.collapsed .spine{display:none}
+  .hint-pane{display:none}
+  .back{display:inline-flex}
+  .pane-head{padding:12px 16px 8px}
+  .pane-board{padding:4px 16px 6px}
+  .sec{padding:14px 16px 4px}
+  .index .pane-body{padding:14px 16px 24px}
+  .find{margin:0 -16px;padding:10px 16px;top:-14px}
+  .pane-board .board-shell{--w:min(100% / 1.112, 300px, (100dvh - var(--head-h) - 400px) / 1.112)}
+}
+</style>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"></div><h1>Chess Vision Lab</h1></div>
+    <div class="top-right"><!--NAV--></div>
+  </header>
+</div>
+<main class="stack" id="stack" aria-label="Openings and their variations"></main>
+
+<script src="chess.js"></script>
+<script src="openings.js"></script>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+const FILES='abcdefgh';
+const GROUPS={open:['1.e4 e5','Open games'],'semi-open':['1.e4, other replies','Semi-open games'],closed:['1.d4 d5','Closed games'],
+  indian:['1.d4, other replies','Indian defences'],flank:['1.c4, 1.Nf3, 1.f4','Flank openings']};
+const byId=new Map(OPENINGS.map(o=>[o.id,o]));
+const label=(p,san)=>Math.floor(p/2)+1+(p%2?'...':'.')+san;
+const narrow=()=>matchMedia('(max-width:720px)').matches;
+
+/* ---------- lines ---------- */
+/* A node is one line on show: an opening, or a variation of the line before it in the stack.
+   sans/notes cover the whole line from move 1; own is where its annotated moves start (the moves before come from the
+   line it branches from); at, for a variation or a linked opening, is the ply where it leaves that line. */
+function root(o,at){
+  return {o,title:o.name,sans:o.moves.map(m=>m[0]),notes:o.moves.map(m=>m[1]),own:0,idea:o.idea,vars:o.vars,at:at==null?null:at,side:o.side};
+}
+function child(node,v){
+  if(v.ref)return Object.assign(root(byId.get(v.ref),v.at),{parent:node});
+  return {o:node.o,title:v.name,sans:node.sans.slice(0,v.at).concat(v.moves.map(m=>m[0])),notes:node.notes.slice(0,v.at).concat(v.moves.map(m=>m[1])),
+    own:v.at,idea:v.idea,vars:v.vars,at:v.at,side:node.side,parent:node,summary:v.summary};
+}
+/* positions after each ply (0 = the start), with the last move's squares */
+function positions(sans){
+  const c=new Chess(), out=[{fen:c.fen(),from:null,to:null}];
+  for(const s of sans){const m=c.move(s);out.push({fen:c.fen(),from:m.from,to:m.to});}
+  return out;
+}
+/* the first move of a variation, as it is played */
+const firstMove=(node,v)=>v.ref?byId.get(v.ref).moves[v.at][0]:v.moves[0][0];
+/* how many variations sit under a variation (for the "n more" hint) */
+const depth=v=>v.ref?0:(v.vars||[]).length;
+/* The moves that name an opening: one ply past where it leaves the closest other opening in the list, not counting the
+   ones it links to (a Najdorf is named by 5...a6, not by 1.e4 c5). */
+const keyLen=new Map();
+(function(){
+  const refs=o=>{const s=new Set();(function walk(vs){for(const v of vs||[]){if(v.ref)s.add(v.ref);else walk(v.vars);}})(o.vars);return s;};
+  for(const o of OPENINGS){
+    const skip=refs(o);let best=0;
+    for(const p of OPENINGS){if(p===o||skip.has(p.id))continue;let k=0;while(k<o.moves.length&&k<p.moves.length&&o.moves[k][0]===p.moves[k][0])k++;best=Math.max(best,k);}
+    keyLen.set(o.id,Math.min(o.moves.length,best+1));
+  }
+})();
+const movesText=(sans,from,to)=>{let h='';for(let p=from;p<to;p++)h+=(p%2===0?(p/2+1)+'.':(p===from?Math.floor(p/2)+1+'...':''))+sans[p]+' ';return h.trim();};
+
+/* ---------- the stack ---------- */
+/* panes[0] is the list; then the opening (path []), then one pane per variation opened (path of indices into vars) */
+const stackEl=$('stack');
+const panes=[];
+let focusK=0;
+const hashFor=(id,path)=>'#'+id+(path.length?'/'+path.join('/'):'');
+function parseHash(){
+  const h=decodeURIComponent(location.hash.slice(1)).split('/').filter(Boolean);
+  if(!h.length||!byId.has(h[0]))return null;
+  const nodes=[root(byId.get(h[0]))];
+  for(const x of h.slice(1)){const n=nodes[nodes.length-1], v=n.vars[+x];if(!/^\d+$/.test(x)||!v)break;nodes.push(child(n,v));}
+  return {id:h[0],path:h.slice(1,nodes.length).map(Number),nodes};
+}
+/* rebuilds the panes to match the address, keeping the ones that are still there (and where they were in their line) */
+function sync(){
+  const want=parseHash();
+  const nodes=want?want.nodes:[];
+  const keys=nodes.map((n,k)=>want.id+'/'+want.path.slice(0,k).join('/'));
+  let keep=1;
+  while(keep<panes.length&&keep-1<keys.length&&panes[keep].key===keys[keep-1])keep++;
+  const grew=keys.length+1>keep;
+  while(panes.length>keep)panes.pop().el.remove();
+  for(let k=keep-1;k<keys.length;k++){
+    const node=nodes[k], prev=panes[panes.length-1];
+    const ply=node.at!=null?Math.min(node.sans.length,node.at+1):0;
+    panes.push(linePane(node,keys[k],want.path.slice(0,k),ply));
+    if(prev.node&&node.at!=null)setPly(prev,Math.min(node.at,prev.node.sans.length));
+  }
+  hint.hidden=panes.length>1;
+  stackEl.appendChild(hint);
+  panes.forEach((p,k)=>{p.el.style.setProperty('--k',k);markOpen(p,k);});
+  renderIndexCurrent();
+  focusK=panes.length-1;
+  requestAnimationFrame(()=>{layout();if(grew)reveal(panes.length-1,true);else onScroll();});
+  const cur=nodes[nodes.length-1];
+  document.title=(cur?cur.title+' · ':'')+'Opening Learner · Chess Vision Lab';
+}
+function go(id,path){const h=hashFor(id,path);if(location.hash===h)sync();else location.hash=h;}
+/* every pane's path counts from the opening in the first line pane, so a linked opening's variations keep the chain */
+function closeFrom(k){if(k<=1)location.hash='';else go(panes[1].node.o.id,panes[k].path.slice(0,-1));}
+const hint=document.createElement('div');hint.className='hint-pane';
+hint.innerHTML='<p><b>Pick an opening</b>Its moves open here, each with what it is for. Variations open beside it, so you can follow a line as deep as you like and step back.</p>';
+
+/* natural left edge of pane k (before sticking) */
+const naturalLeft=k=>{let x=0;for(let j=0;j<k;j++)x+=panes[j].el.offsetWidth;return x;};
+function reveal(k,smooth){
+  const spine=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spine'))||44;
+  let x;
+  if(narrow())x=naturalLeft(k);
+  else if(k===panes.length-1)x=stackEl.scrollWidth;          // the newest: as far right as it goes
+  else x=naturalLeft(k)-k*spine;
+  stackEl.scrollTo({left:x,behavior:smooth&&!reduced()?'smooth':'auto'});
+}
+function onScroll(){
+  for(let k=0;k<panes.length;k++){
+    const a=panes[k].el.getBoundingClientRect(), b=k+1<panes.length?panes[k+1].el.getBoundingClientRect():null;
+    panes[k].el.classList.toggle('collapsed',!!b&&!narrow()&&b.left-a.left<a.width*.45);
+  }
+  if(narrow()){const k=Math.round(stackEl.scrollLeft/Math.max(1,stackEl.clientWidth));if(panes[k])focusK=k;}
+}
+stackEl.addEventListener('scroll',onScroll,{passive:true});
+function layout(){
+  const top=$('app').getBoundingClientRect().height;
+  document.documentElement.style.setProperty('--head-h',Math.ceil(top)+'px');
+  for(const p of panes)if(p.boardEl)p.body.style.setProperty('--board-h',p.boardBox.offsetHeight+'px');
+}
+addEventListener('resize',()=>{layout();onScroll();});
+addEventListener('hashchange',sync);
+const reduced=()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){return false;}};
+
+/* ---------- the list of openings ---------- */
+const F={q:'',side:''};
+const indexPane=(function(){
+  const el=document.createElement('section');el.className='pane index';el.setAttribute('aria-label','Openings');
+  el.innerHTML='<button class="spine" aria-label="Back to the list of openings"><span>Openings</span></button><div class="pane-body">'+
+    '<h2>Openings</h2><p class="lede">Pick one to learn it move by move: what every move is for, the idea behind the whole opening, and its main variations, each in a pane of its own.</p>'+
+    '<div class="find"><input type="search" id="q" placeholder="Search: name, ECO code or moves" aria-label="Search openings" autocomplete="off">'+
+    '<div class="chips" role="group" aria-label="Played by"><button class="btn" data-s="" aria-pressed="true">All</button><button class="btn" data-s="w" aria-pressed="false">For White</button><button class="btn" data-s="b" aria-pressed="false">For Black</button></div></div>'+
+    '<div id="list"></div><p class="credit">'+OPENINGS.length+' openings. Every move is checked with chess.js; ←/→ step through the line in the pane you are reading.</p></div>';
+  stackEl.appendChild(el);
+  const pane={el,body:el.querySelector('.pane-body'),key:'',node:null};
+  el.querySelector('.spine').onclick=()=>reveal(0,true);
+  return pane;
+})();
+panes.push(indexPane);
+function renderList(){
+  const q=F.q.trim().toLowerCase().replace(/\s+/g,' '), list=$('list');
+  const norm=s=>s.toLowerCase().replace(/[’']/g,'').normalize('NFD').replace(/[̀-ͯ]/g,'');
+  let h='', n=0;
+  for(const g of Object.keys(GROUPS)){
+    const os=OPENINGS.filter(o=>o.group===g&&(!F.side||o.side===F.side)&&(!q||norm([o.name,o.eco,movesText(o.moves.map(m=>m[0]),0,keyLen.get(o.id)),o.summary].join(' ')).includes(norm(q))));
+    if(!os.length)continue;n+=os.length;
+    h+='<div class="group"><h3 class="eyebrow">'+GROUPS[g][1]+'<small>'+GROUPS[g][0]+'</small></h3>'+os.map(o=>
+      '<button class="op" data-id="'+o.id+'"><span class="nm">'+esc(o.name)+'<small>'+esc(o.eco)+' · '+(o.side==='w'?'White':'Black')+'</small></span>'+
+      '<span class="mv">'+esc(movesText(o.moves.map(m=>m[0]),0,keyLen.get(o.id)))+'</span><span class="sum">'+esc(o.summary)+'</span></button>').join('')+'</div>';
+  }
+  list.innerHTML=h||'<p class="none">No opening matches “'+esc(F.q)+'”.</p>';
+  renderIndexCurrent();
+}
+function renderIndexCurrent(){
+  const cur=panes[1]&&panes[1].node?panes[1].node.o.id:null;
+  $('list').querySelectorAll('.op').forEach(b=>b.setAttribute('aria-current',b.dataset.id===cur?'true':'false'));
+}
+$('q').addEventListener('input',e=>{F.q=e.target.value;renderList();});
+indexPane.el.querySelector('.chips').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;F.side=b.dataset.s;
+  indexPane.el.querySelectorAll('.chips .btn').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));renderList();});
+$('list').addEventListener('click',e=>{const b=e.target.closest('.op');if(b)go(b.dataset.id,[]);});
+
+/* ---------- a line's pane ---------- */
+function linePane(node,key,path,ply){
+  const k=panes.length, o=node.o, el=document.createElement('section');
+  el.className='pane line';el.setAttribute('aria-label',node.title);
+  const parent=panes[k-1];
+  const isVar=node.own>0&&node.parent, isRef=node.at!=null&&!isVar;
+  const crumb=isVar?'Variation':GROUPS[o.group][1];
+  const backTo=k===1?'Openings':parent.node.title;
+  let from='';
+  if(node.at!=null&&parent.node)from='<p class="from">'+(isVar?'Branches from ':'Leaves ')+'<button data-a="parent">'+esc(parent.node.title)+'</button> '+
+    (node.at>0?'after '+esc(label(node.at-1,node.sans[node.at-1])):'at the first move')+', with '+esc(label(node.at,node.sans[node.at]))+'.</p>';
+  // moves
+  let mv='';
+  const altsAt=new Map();
+  node.vars.forEach((v,i)=>{const a=Math.max(v.at,node.own);if(!altsAt.has(a))altsAt.set(a,[]);altsAt.get(a).push(i);});
+  const altHtml=(p,cont)=>{const is=altsAt.get(p);if(!is)return '';
+    return '<div class="alts">'+(cont?'Continue:':'Instead:')+is.map(i=>{const v=node.vars[i];
+      return '<button class="alt" data-v="'+i+'"><b>'+esc(label(v.at,firstMove(node,v)))+'</b><span>'+esc(v.name)+'</span></button>';}).join('')+'</div>';};
+  if(node.own>0){
+    mv+='<div class="prefix"><span>From '+esc(node.parent.title)+':</span>';
+    for(let p=0;p<node.own;p++)mv+='<button class="pm" data-p="'+(p+1)+'">'+esc(p%2===0||p===0?label(p,node.sans[p]):node.sans[p])+'</button>';
+    mv+='</div>';
+  }
+  for(let p=node.own;p<node.sans.length;p++){
+    const no=Math.floor(p/2)+1;
+    mv+='<button class="mrow" data-p="'+(p+1)+'"><span class="san">'+(p%2===0?no+'.':'<i>'+no+'...</i>')+esc(node.sans[p])+'</span><span class="note">'+esc(node.notes[p])+'</span></button>'+altHtml(p,false);
+  }
+  mv+=altHtml(node.sans.length,true);
+  const vars=node.vars.length?'<section class="sec"><h3 class="eyebrow">Variations</h3><div class="vars">'+node.vars.map((v,i)=>
+    '<button class="var" data-v="'+i+'"><span class="vn"><b>'+esc(label(v.at,firstMove(node,v)))+'</b>'+esc(v.name)+(depth(v)?'<span class="deep">· '+depth(v)+' more inside</span>':'')+(v.ref?'<span class="deep">· opening</span>':'')+'</span>'+
+    '<span class="vs">'+esc(v.summary||'')+'</span><span class="go" aria-hidden="true">›</span></button>').join('')+'</div></section>':'';
+  el.innerHTML='<button class="spine" aria-label="Show '+esc(node.title)+'"><span>'+esc(node.title)+'</span></button><div class="pane-body">'+
+    '<div class="pane-head"><div class="crumbs"><span class="eyebrow">'+esc(crumb)+'</span><span class="row"><button class="btn small ghost back" data-a="back">‹ '+esc(backTo)+'</button>'+
+      '<button class="btn small ghost x" data-a="close" aria-label="Close" title="Close (Esc)">×</button></span></div>'+
+    '<h2>'+esc(node.title)+'</h2><div class="tags"><span class="tag">'+esc(o.eco)+'</span><span class="tag side-'+o.side+'">'+(o.side==='w'?'Played by White':'Played by Black')+'</span>'+
+      (isVar||isRef?'':'<span class="tag">'+GROUPS[o.group][0]+'</span>')+'</div>'+from+'</div>'+
+    '<div class="pane-board"><div class="board-bar"><span class="now" data-r="now"></span><button class="btn small ghost" data-a="flip" title="Flip the board">Flip</button></div>'+
+      '<div class="board-shell"><div class="board" role="img"></div><svg class="arrows" viewBox="0 0 8 8" aria-hidden="true"></svg></div>'+
+      '<div class="board-bar"><div class="steps"><button class="btn small" data-a="first" aria-label="To the start">⏮</button><button class="btn small" data-a="prev" aria-label="Previous move (←)">‹</button>'+
+      '<span class="count" data-r="count"></span><button class="btn small" data-a="next" aria-label="Next move (→)">›</button><button class="btn small" data-a="last" aria-label="To the end">⏭</button></div></div></div>'+
+    '<section class="sec idea"><h3 class="eyebrow">'+(isVar?'The idea of this variation':'The idea')+'</h3>'+node.idea.map(p=>'<p>'+esc(p)+'</p>').join('')+'</section>'+
+    '<section class="sec moves"><h3 class="eyebrow">Move by move</h3>'+mv+'</section>'+vars+
+    '<p class="end">'+(node.vars.length?'Pick a variation to open it beside this line.':'The end of this line.')+'</p></div>';
+  stackEl.appendChild(el);
+  const boardEl=el.querySelector('.board'), sqEls=[];
+  for(let d=0;d<64;d++){const s=document.createElement('div');s.className='sq';boardEl.appendChild(s);sqEls.push(s);}
+  const pane={el,key,node,path,body:el.querySelector('.pane-body'),boardEl,boardBox:el.querySelector('.pane-board'),sqEls,
+    pos:positions(node.sans),ply:-1,flipped:o.side==='b'};
+  el.addEventListener('click',e=>{
+    const kk=panes.indexOf(pane);focusK=kk;
+    if(e.target.closest('.spine')){reveal(kk,true);return;}
+    const v=e.target.closest('[data-v]');if(v){go(panes[1].node.o.id,pane.path.concat(+v.dataset.v));return;}
+    const p=e.target.closest('[data-p]');if(p){setPly(pane,+p.dataset.p);return;}
+    if(e.target.closest('.board')){setPly(pane,pane.ply+1);return;}
+    const a=e.target.closest('[data-a]');if(!a)return;
+    ({first:()=>setPly(pane,0),prev:()=>setPly(pane,pane.ply-1),next:()=>setPly(pane,pane.ply+1),last:()=>setPly(pane,pane.pos.length-1),
+      flip:()=>{pane.flipped=!pane.flipped;drawBoard(pane);},close:()=>closeFrom(kk),back:()=>reveal(kk-1,true),parent:()=>reveal(kk-1,true)})[a.dataset.a]();
+  });
+  /* pointing at a variation shows where it branches, with its first move as an arrow */
+  const over=e=>{const v=e.target.closest('[data-v]');preview(pane,v?node.vars[+v.dataset.v]:null);};
+  el.addEventListener('pointerover',over);el.addEventListener('focusin',over);
+  el.addEventListener('pointerleave',()=>preview(pane,null));el.addEventListener('focusout',e=>{if(!el.contains(e.relatedTarget))preview(pane,null);});
+  setPly(pane,ply,true);
+  return pane;
+}
+function setPly(pane,ply,quiet){
+  ply=Math.max(0,Math.min(pane.pos.length-1,ply));
+  if(ply===pane.ply)return;
+  pane.ply=ply;pane.preview=null;drawBoard(pane);
+  const n=pane.node;
+  pane.el.querySelector('[data-r="now"]').innerHTML=ply===0?'Start <small>· the initial position</small>':esc(label(ply-1,n.sans[ply-1]))+(ply-1<n.own?' <small>· before the variation</small>':'');
+  pane.el.querySelector('[data-r="count"]').textContent=ply+' / '+n.sans.length;
+  pane.el.querySelectorAll('.mrow,.pm').forEach(r=>{const p=+r.dataset.p;r.classList.toggle('cur',p===ply);r.classList.toggle('later',p>ply);});
+  pane.el.querySelector('[data-a="prev"]').disabled=pane.el.querySelector('[data-a="first"]').disabled=ply===0;
+  pane.el.querySelector('[data-a="next"]').disabled=pane.el.querySelector('[data-a="last"]').disabled=ply===pane.pos.length-1;
+  if(!quiet){const r=pane.el.querySelector('.mrow.cur');if(r)r.scrollIntoView({block:'nearest',behavior:reduced()?'auto':'smooth'});}
+}
+function preview(pane,v){
+  if(pane.preview===v)return;
+  pane.preview=v;drawBoard(pane);
+}
+const idx=s=>(8-(+s[1]))*8+FILES.indexOf(s[0]);
+function arrowSvg(pane,f,t){
+  const pt=sq=>{const i=pane.flipped?63-idx(sq):idx(sq);return [i%8+.5,Math.floor(i/8)+.5];};
+  const [x1,y1]=pt(f),[x2,y2]=pt(t),len=Math.hypot(x2-x1,y2-y1),ux=(x2-x1)/len,uy=(y2-y1)/len;
+  const H=.42,W=.3,bx=x2-ux*H,by=y2-uy*H,r=n=>n.toFixed(3);
+  return '<g opacity=".8" style="fill:var(--ann-g);stroke:var(--ann-g)"><line x1="'+r(x1)+'" y1="'+r(y1)+'" x2="'+r(bx+ux*.02)+'" y2="'+r(by+uy*.02)+'" stroke-width=".17" stroke-linecap="round"/>'+
+    '<polygon style="stroke:none" points="'+r(x2)+','+r(y2)+' '+r(bx-uy*W)+','+r(by+ux*W)+' '+r(bx+uy*W)+','+r(by-ux*W)+'"/></g>';
+}
+function drawBoard(pane){
+  // the variation pointed at, or else the one open to the right while this board is where it branches
+  const v=pane.preview||(pane.open&&pane.open.at===pane.ply?pane.open:null), P=pane.pos[v?v.at:pane.ply];
+  let arrow='';
+  if(v){const c=new Chess(P.fen), m=c.move(firstMove(pane.node,v));arrow=arrowSvg(pane,m.from,m.to);}
+  pane.el.querySelector('.arrows').innerHTML=arrow;
+  const rows=P.fen.split(' ')[0].split('/'), b=new Array(64).fill(null);
+  rows.forEach((r,ri)=>{let f=0;for(const ch of r){if(ch>='1'&&ch<='8')f+=+ch;else{b[ri*8+f]=(ch===ch.toUpperCase()?'w':'b')+ch.toLowerCase();f++;}}});
+  const hl=P.from?[idx(P.from),idx(P.to)]:[];
+  for(let d=0;d<64;d++){
+    const i=pane.flipped?63-d:d, r=Math.floor(i/8), f=i%8, el=pane.sqEls[d];
+    el.className='sq'+((r+f)%2?' dk':'')+(hl.includes(i)?' hl':'');
+    let h=b[i]?'<div class="pc '+b[i]+'"></div>':'';
+    if(d%8===0)h+='<span class="co r">'+(8-r)+'</span>';
+    if(d>=56)h+='<span class="co f">'+FILES[f]+'</span>';
+    el.innerHTML=h;
+  }
+  pane.boardEl.setAttribute('aria-label','Board '+(pane.ply?'after '+label(pane.ply-1,pane.node.sans[pane.ply-1]):'at the start'));
+}
+/* the variation open to the right of a pane is marked in its list */
+function markOpen(p,k){
+  if(!p.node)return;
+  const next=panes[k+1], i=next?next.path[next.path.length-1]:null;
+  p.el.querySelectorAll('[data-v]').forEach(b=>b.setAttribute('aria-current',next&&+b.dataset.v===i?'true':'false'));
+  const open=next?p.node.vars[i]:null;
+  if(open!==p.open){p.open=open;drawBoard(p);}
+}
+
+/* ---------- keys ---------- */
+document.addEventListener('keydown',e=>{
+  if(e.target.closest&&e.target.closest('input,textarea'))return;
+  const p=panes[focusK];
+  if(e.key==='Escape'&&panes.length>1){e.preventDefault();closeFrom(panes.length-1);return;}
+  if(!p||!p.node)return;
+  const step={ArrowRight:1,ArrowLeft:-1}[e.key];
+  if(step){e.preventDefault();setPly(p,p.ply+step);}
+  else if(e.key==='Home'){e.preventDefault();setPly(p,0);}
+  else if(e.key==='End'){e.preventDefault();setPly(p,p.pos.length-1);}
+});
+
+renderList();
+layout();
+sync();
+if(document.fonts)document.fonts.ready.then(()=>{layout();onScroll();});
+})();
+</script>
