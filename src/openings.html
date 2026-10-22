@@ -8,7 +8,8 @@
 /*COMMON*/
 /* Opening Learner: a row of stacked panes under the header, like Andy Matuschak's notes. The first pane lists the
    openings; picking one opens its line to the right, and each variation opens in a pane to the right of the line it
-   branches from. Panes that no longer fit slide under their neighbour and leave a spine with their title. */
+   branches from. One line open fills the screen beside the list; two share it half and half; with more, the older ones
+   slide under their neighbour and leave a spine with their title. A wide pane puts the board beside the text. */
 :root{--spine:44px;--pw:468px;--iw:356px;--head-h:72px}
 html,body{height:100%}
 body{overflow:hidden}
@@ -20,6 +21,7 @@ body{overflow:hidden}
 .pane{flex:none;width:var(--pw);height:100%;position:sticky;left:calc(var(--k) * var(--spine));background:var(--surface);
   border-right:1px solid var(--line);box-shadow:-10px 0 24px -18px rgba(40,25,10,.45)}
 .pane.index{width:var(--iw);background:var(--surface-2);box-shadow:none}
+.pane.line{container-type:inline-size}
 .pane-body{height:100%;overflow-y:auto;overscroll-behavior:contain;transition:opacity .15s}
 .spine{position:absolute;left:0;top:0;bottom:0;width:var(--spine);display:none;align-items:flex-start;justify-content:center;padding:16px 0;border:0;border-right:1px solid var(--line);
   background:inherit;cursor:pointer;z-index:5;color:var(--muted);font:600 14px var(--f-body);text-align:left}
@@ -73,8 +75,10 @@ body{overflow:hidden}
 .pane-board .board-shell{--w:min(100% / 1.112, 284px, (100dvh - var(--head-h) - 380px) / 1.112);margin-top:calc(var(--w) * .062)}
 .pane-board .board{touch-action:pan-x pan-y;cursor:pointer}
 .pane-board .board-bar{min-height:30px}
-.pane-board .board-bar:first-child{margin-bottom:4px}
-.pane-board .board-bar:last-child{margin-top:4px}
+.pane-board .bar-top{margin:0 auto 4px}
+.pane-board .bar-steps{margin:4px auto 0}
+.cur-note{display:none;margin:0;font-size:14.5px;line-height:1.55}
+.cur-note b{font-family:var(--f-mono);font-weight:600;margin-right:6px}
 .now{font-family:var(--f-mono);font-size:14px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .now small{font-family:var(--f-body);font-weight:500;font-size:12.5px;color:var(--muted)}
 .steps{display:flex;align-items:center;gap:4px}
@@ -111,6 +115,32 @@ body{overflow:hidden}
 .var .go{grid-row:1 / span 2;grid-column:2;color:var(--muted);font-size:18px}
 .var .deep{font-size:11.5px;color:var(--muted);font-weight:500;margin-left:4px}
 .end{padding:4px 20px 28px;font-size:13px;color:var(--muted)}
+
+/* a half-screen pane: the board on the left of the block that stays in view, the move's note beside it */
+@container (min-width:560px) and (max-width:839.98px){
+  .pane-board{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto 1fr;column-gap:20px;align-items:start;padding:10px 20px 12px}
+  .pane-board .board-shell{grid-column:1;grid-row:1 / span 3;--w:min(250px, (100dvh - var(--head-h) - 220px) / 1.112);min-width:0;
+    margin:calc(var(--w) * .052) calc(var(--w) * .062) calc(var(--w) * .101 + 4px)}
+  .pane-board .board-bar{grid-column:2;margin:0;max-width:none;width:auto}
+  .pane-board .bar-top{grid-row:1}
+  .pane-board .bar-steps{grid-row:2;margin:2px 0 10px;justify-content:flex-start}
+  .cur-note{display:block;grid-column:2;grid-row:3}
+}
+
+/* a wide pane: the board stays beside the text, which keeps a readable measure */
+@container (min-width:840px){
+  .pane-inner{display:grid;grid-template-columns:minmax(320px,440px) minmax(0,680px);column-gap:44px;justify-content:center;padding:0 36px}
+  .pane-inner > *{grid-column:2}
+  .pane-inner > .pane-board{grid-column:1;grid-row:1 / span 6;align-self:start;border-bottom:0;padding:28px 0 20px}
+  .pane-inner > .pane-board .board-shell{--w:min(100% / 1.112, 440px, (100dvh - var(--head-h) - 170px) / 1.112)}
+  .line .pane-body{scroll-padding-top:16px}
+  .pane-head{padding:24px 0 8px}
+  .pane-head h2{font-size:30px}
+  .sec{padding:18px 0 4px}
+  .idea p{font-size:15.5px;line-height:1.6}
+  .mrow{font-size:15px}
+  .end{padding:4px 0 36px}
+}
 
 /* phones: one pane at a time, side by side; swipe or ‹ to go back, a variation slides in from the right */
 @media (max-width:720px){
@@ -251,9 +281,19 @@ function onScroll(){
   if(narrow()){const k=Math.round(stackEl.scrollLeft/Math.max(1,stackEl.clientWidth));if(panes[k])focusK=k;}
 }
 stackEl.addEventListener('scroll',onScroll,{passive:true});
+/* Line panes on a desktop: one fills the room beside the list; from two on, the newest two share the screen, with a
+   spine for each pane before them (at least 560px each, or they overlap). Phones keep one pane per screen (CSS). */
+function sizePanes(){
+  const n=panes.length-1;
+  if(narrow()||!n){stackEl.style.removeProperty('--pw');return;}
+  const css=getComputedStyle(document.documentElement), spine=parseFloat(css.getPropertyValue('--spine'))||44, iw=indexPane.el.offsetWidth;
+  const w=stackEl.clientWidth, pw=n===1?w-iw:Math.max(560,Math.floor((w-spine*(n-1))/2));
+  stackEl.style.setProperty('--pw',Math.max(pw,420)+'px');
+}
 function layout(){
   const top=$('app').getBoundingClientRect().height;
   document.documentElement.style.setProperty('--head-h',Math.ceil(top)+'px');
+  sizePanes();
   for(const p of panes)if(p.boardEl)p.body.style.setProperty('--board-h',p.boardBox.offsetHeight+'px');
 }
 addEventListener('resize',()=>{layout();onScroll();});
@@ -329,18 +369,19 @@ function linePane(node,key,path,ply){
   const vars=node.vars.length?'<section class="sec"><h3 class="eyebrow">Variations</h3><div class="vars">'+node.vars.map((v,i)=>
     '<button class="var" data-v="'+i+'"><span class="vn"><b>'+esc(label(v.at,firstMove(node,v)))+'</b>'+esc(v.name)+(depth(v)?'<span class="deep">· '+depth(v)+' more inside</span>':'')+(v.ref?'<span class="deep">· opening</span>':'')+'</span>'+
     '<span class="vs">'+esc(v.summary||'')+'</span><span class="go" aria-hidden="true">›</span></button>').join('')+'</div></section>':'';
-  el.innerHTML='<button class="spine" aria-label="Show '+esc(node.title)+'"><span>'+esc(node.title)+'</span></button><div class="pane-body">'+
+  el.innerHTML='<button class="spine" aria-label="Show '+esc(node.title)+'"><span>'+esc(node.title)+'</span></button><div class="pane-body"><div class="pane-inner">'+
     '<div class="pane-head"><div class="crumbs"><span class="eyebrow">'+esc(crumb)+'</span><span class="row"><button class="btn small ghost back" data-a="back">‹ '+esc(backTo)+'</button>'+
       '<button class="btn small ghost x" data-a="close" aria-label="Close" title="Close (Esc)">×</button></span></div>'+
     '<h2>'+esc(node.title)+'</h2><div class="tags"><span class="tag">'+esc(o.eco)+'</span><span class="tag side-'+o.side+'">'+(o.side==='w'?'Played by White':'Played by Black')+'</span>'+
       (isVar||isRef?'':'<span class="tag">'+GROUPS[o.group][0]+'</span>')+'</div>'+from+'</div>'+
-    '<div class="pane-board"><div class="board-bar"><span class="now" data-r="now"></span><button class="btn small ghost" data-a="flip" title="Flip the board">Flip</button></div>'+
+    '<div class="pane-board"><div class="board-bar bar-top"><span class="now" data-r="now"></span><button class="btn small ghost" data-a="flip" title="Flip the board">Flip</button></div>'+
       '<div class="board-shell"><div class="board" role="img"></div><svg class="arrows" viewBox="0 0 8 8" aria-hidden="true"></svg></div>'+
-      '<div class="board-bar"><div class="steps"><button class="btn small" data-a="first" aria-label="To the start">⏮</button><button class="btn small" data-a="prev" aria-label="Previous move (←)">‹</button>'+
-      '<span class="count" data-r="count"></span><button class="btn small" data-a="next" aria-label="Next move (→)">›</button><button class="btn small" data-a="last" aria-label="To the end">⏭</button></div></div></div>'+
+      '<div class="board-bar bar-steps"><div class="steps"><button class="btn small" data-a="first" aria-label="To the start">⏮</button><button class="btn small" data-a="prev" aria-label="Previous move (←)">‹</button>'+
+      '<span class="count" data-r="count"></span><button class="btn small" data-a="next" aria-label="Next move (→)">›</button><button class="btn small" data-a="last" aria-label="To the end">⏭</button></div></div>'+
+      '<p class="cur-note" data-r="note" aria-live="polite"></p></div>'+
     '<section class="sec idea"><h3 class="eyebrow">'+(isVar?'The idea of this variation':'The idea')+'</h3>'+node.idea.map(p=>'<p>'+esc(p)+'</p>').join('')+'</section>'+
     '<section class="sec moves"><h3 class="eyebrow">Move by move</h3>'+mv+'</section>'+vars+
-    '<p class="end">'+(node.vars.length?'Pick a variation to open it beside this line.':'The end of this line.')+'</p></div>';
+    '<p class="end">'+(node.vars.length?'Pick a variation to open it beside this line.':'The end of this line.')+'</p></div></div>';
   stackEl.appendChild(el);
   const boardEl=el.querySelector('.board'), sqEls=[];
   for(let d=0;d<64;d++){const s=document.createElement('div');s.className='sq';boardEl.appendChild(s);sqEls.push(s);}
@@ -370,6 +411,8 @@ function setPly(pane,ply,quiet){
   const n=pane.node;
   pane.el.querySelector('[data-r="now"]').innerHTML=ply===0?'Start <small>· the initial position</small>':esc(label(ply-1,n.sans[ply-1]))+(ply-1<n.own?' <small>· before the variation</small>':'');
   pane.el.querySelector('[data-r="count"]').textContent=ply+' / '+n.sans.length;
+  pane.el.querySelector('[data-r="note"]').innerHTML=ply===0?'The starting position. Step through the line with › or →.':
+    ply-1<n.own?'Played before the variation, in '+esc(n.parent.title)+'.':'<b>'+esc(label(ply-1,n.sans[ply-1]))+'</b>'+esc(n.notes[ply-1]);
   pane.el.querySelectorAll('.mrow,.pm').forEach(r=>{const p=+r.dataset.p;r.classList.toggle('cur',p===ply);r.classList.toggle('later',p>ply);});
   pane.el.querySelector('[data-a="prev"]').disabled=pane.el.querySelector('[data-a="first"]').disabled=ply===0;
   pane.el.querySelector('[data-a="next"]').disabled=pane.el.querySelector('[data-a="last"]').disabled=ply===pane.pos.length-1;
