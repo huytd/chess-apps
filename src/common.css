@@ -134,9 +134,9 @@ a:hover{text-decoration-color:currentColor}
 @media (hover:none){.kbd{display:none}} /* touch screens have no Enter key to hint at */
 .row.split > .btn.primary{flex:1 1 auto}
 
-/* feedback: the panel's main message. Plain on start; tinted with a rule on the left once there is a verdict. */
+/* feedback: the panel's main message. Plain on start; a tinted, outlined box once there is a verdict. */
 .feedback{display:flex;flex-direction:column;gap:12px;padding:16px 0 0}
-.feedback.good,.feedback.bad{padding:14px 16px;border-radius:12px;margin-top:14px;box-shadow:inset 3px 0 0 var(--fb)}
+.feedback.good,.feedback.bad{padding:14px 16px;border-radius:12px;margin-top:14px;border:1px solid color-mix(in srgb, var(--fb) 32%, transparent)}
 .feedback.good{--fb:var(--good-solid);background:var(--good-soft)}
 .feedback.bad{--fb:var(--bad-solid);background:var(--bad-soft)}
 .feedback h3{margin:0;font-family:var(--f-display);font-weight:800;font-size:21px;line-height:1.2;letter-spacing:-.01em}
