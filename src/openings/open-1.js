@@ -62,7 +62,7 @@ module.exports = [
             moves: [
               ['Nc3', 'Blocks the check with a piece and lets e4 go.'],
               ['Nxe4', 'Black accepts and the knight is very active in the centre.'],
-              ['O-O', 'White castles and allows the doubled pawns: speed matters more than structure here.'],
+              ['O-O', 'White castles and lets Black take the knight on c3: getting the king safe and the rook to e1 matters more than the pawns.'],
               ['Bxc3', 'Black takes, gaining a second pawn on the next move or saving the bishop from being trapped.'],
               ['d5', 'The point: instead of recapturing, White hits the knight on c6 and opens lines while Black\'s king is in the centre.'],
               ['Bf6', 'The bishop gets back to defend the king\'s side.'],
@@ -114,7 +114,7 @@ module.exports = [
       ['Bb5+', 'White keeps the bishop with a check, so that the d5 pawn stays protected by the queen and does not need the bishop.'],
       ['c6', 'Black blocks the check, and the c-pawn attacks both the bishop on b5 and the pawn on d5.'],
       ['dxc6', 'White accepts: after the recapture Black is a pawn down for good.'],
-      ['bxc6', 'Black recaptures with tempo on the bishop and opens the b-file. The doubled pawns are a fair price for the time gained.'],
+      ['bxc6', 'Black recaptures with tempo on the bishop and opens the b-file for the rook. Black is a pawn down and the queenside pawns are split (a7 and c6 are both isolated), a fair price for the time gained.'],
       ['Be2', 'The bishop retreats to safety on e2, where it covers the kingside. 8.Qf3 is the main alternative.'],
       ['h6', 'Black kicks the knight from g5 before getting on with development.'],
       ['Nf3', 'The main retreat, guarding the kingside. 9.Nh3 is Steinitz\'s alternative.'],
