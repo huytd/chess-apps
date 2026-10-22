@@ -392,7 +392,7 @@ function linePane(node,key,path,ply){
     const kk=panes.indexOf(pane);focusK=kk;
     if(e.target.closest('.spine')){reveal(kk,true);return;}
     const v=e.target.closest('[data-v]');if(v){go(panes[1].node.o.id,pane.path.concat(+v.dataset.v));return;}
-    const p=e.target.closest('[data-p]');if(p){setPly(pane,+p.dataset.p);return;}
+    const p=e.target.closest('[data-p]');if(p){setPly(pane,+p.dataset.p,'hidden');return;}
     if(e.target.closest('.board')){setPly(pane,pane.ply+1);return;}
     const a=e.target.closest('[data-a]');if(!a)return;
     ({first:()=>setPly(pane,0),prev:()=>setPly(pane,pane.ply-1),next:()=>setPly(pane,pane.ply+1),last:()=>setPly(pane,pane.pos.length-1),
@@ -402,10 +402,12 @@ function linePane(node,key,path,ply){
   const over=e=>{const v=e.target.closest('[data-v]');preview(pane,v?node.vars[+v.dataset.v]:null);};
   el.addEventListener('pointerover',over);el.addEventListener('focusin',over);
   el.addEventListener('pointerleave',()=>preview(pane,null));el.addEventListener('focusout',e=>{if(!el.contains(e.relatedTarget))preview(pane,null);});
-  setPly(pane,ply,true);
+  setPly(pane,ply,'none');
   return pane;
 }
-function setPly(pane,ply,quiet){
+/* scroll: 'comfort' (the default) keeps the current move well inside the visible part of the list, 'hidden' only
+   brings it back when it is out of sight (a move just clicked), 'none' leaves the pane where it is */
+function setPly(pane,ply,scroll){
   ply=Math.max(0,Math.min(pane.pos.length-1,ply));
   if(ply===pane.ply)return;
   pane.ply=ply;pane.preview=null;drawBoard(pane);
@@ -417,7 +419,23 @@ function setPly(pane,ply,quiet){
   pane.el.querySelectorAll('.mrow,.pm').forEach(r=>{const p=+r.dataset.p;r.classList.toggle('cur',p===ply);r.classList.toggle('later',p>ply);});
   pane.el.querySelector('[data-a="prev"]').disabled=pane.el.querySelector('[data-a="first"]').disabled=ply===0;
   pane.el.querySelector('[data-a="next"]').disabled=pane.el.querySelector('[data-a="last"]').disabled=ply===pane.pos.length-1;
-  if(!quiet){const r=pane.el.querySelector('.mrow.cur');if(r)r.scrollIntoView({block:'nearest',behavior:reduced()?'auto':'smooth'});}
+  if(scroll!=='none')keepInView(pane,scroll==='hidden');
+}
+/* The part of the pane the move list shows: below the board when the board stays above it (one column), the whole
+   height when it sits beside it. The current move is kept out of the top and bottom edges, and when it has to move it
+   lands a third of the way down, so the moves that follow it are in view too. */
+function keepInView(pane,onlyIfHidden){
+  const row=pane.el.querySelector('.mrow.cur')||(pane.el.querySelector('.pm.cur')&&pane.el.querySelector('.prefix'));
+  if(!row)return;
+  const body=pane.body, b=body.getBoundingClientRect(), r=row.getBoundingClientRect(), bd=pane.boardBox.getBoundingClientRect();
+  // the board covers the list while it is above it: as far as its bottom now, and its own height once it is stuck at the top
+  const over=bd.right>r.left&&bd.left<r.right, top=b.top+(over?Math.max(0,bd.bottom-b.top):0), h=b.bottom-top;
+  if(h<=0)return;
+  const edge=onlyIfHidden?0:Math.min(56,h*.12), low=onlyIfHidden?0:h*.25;
+  if(r.top>=top+edge&&r.bottom<=b.bottom-low)return;
+  const top1=b.top+(over?bd.height:0), h1=b.bottom-top1;
+  const to=r.height>h1*.6?r.top-top1-8:r.top-top1-h1*.3;
+  body.scrollBy({top:to,behavior:reduced()?'auto':'smooth'});
 }
 function preview(pane,v){
   if(pane.preview===v)return;
