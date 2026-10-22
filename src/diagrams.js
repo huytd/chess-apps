@@ -554,8 +554,9 @@ const api = { CLASSES, TILE, CROP, resizeArea, checkerPeaks, findBoards, locateB
   decode, whiteAtBottom, placement, readQuad, readPage };
 
 /* ---------------------------------------------------------------- as a Web Worker */
-/* Messages: {id, op: 'page', img} finds and reads every diagram; {id, op: 'quad', quad} reads one more board on the same
-   page (corners placed by hand); answers {id, result} or {id, error}. The page's pixels stay here between the two. */
+/* Messages: {id, op: 'page', img} finds and reads every diagram; {id, op: 'quad', quad} reads one board on the same page
+   with its corners where they were placed (by hand); answers {id, result} or {id, error}. The page's pixels stay here
+   between the two. */
 if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
   let predict = null, page = null;
   const ready = fetch('diagram-model.json').then(r => { if (!r.ok) throw new Error('model ' + r.status); return r.json(); })
@@ -567,7 +568,7 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
       await ready;
       let result;
       if (op === 'page') { page = e.data.img; result = readPage(page, predict).map(pack); }
-      else if (op === 'quad') result = pack({ score: 0, ...readQuad(page, e.data.fit ? fitCorners(page, e.data.box) : e.data.quad, predict) });
+      else if (op === 'quad') result = pack({ score: 0, ...readQuad(page, e.data.quad, predict) });
       self.postMessage({ id, result });
     } catch (err) { self.postMessage({ id, error: String(err && err.message || err) }); }
   };

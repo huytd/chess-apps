@@ -1,6 +1,6 @@
 # Chess Vision Lab
 
-Browser-based chess training drills, and an analysis of your own games. No build step needed to run: serve `docs/` (for example `python3 -m http.server -d docs`) and open it. Line Vision also works straight from the file; Spot the Danger needs http(s) for its engine, and without it the drill still works but shows no evaluations. Mistake Patterns needs http(s) and an internet connection to fetch your games.
+Browser-based chess training drills, and an analysis of your own games. No build step needed to run: serve `docs/` (for example `python3 -m http.server -d docs`) and open it. Line Vision also works straight from the file; Spot the Danger needs http(s) for its engine, and without it the drill still works but shows no evaluations. Mistake Patterns needs http(s) and an internet connection to fetch your games. Book Reader needs http(s) for its reader and engine (web workers), and an internet connection only to open PDFs.
 
 ## Drills
 
@@ -62,18 +62,35 @@ Each example plays out in three steps on the board: **Your move** (with, dashed,
 
 Settings choose the engine depth: Quick (12), Normal (16, the default, about 20 seconds a game on four workers) or Deep (18, WhyBlunder's own depth). The reply search runs 2 plies shallower, the threat search at depth 12, and every search stops after 45 seconds at most. Analysed games are saved in the browser (up to 200), so running again only analyses new games; a link like `mistake-patterns.html?site=lichess&user=NAME` starts straight away. Stockfish runs in up to four worker threads, each searching from a fresh hash so results are repeatable.
 
+## Books
+
+### Book Reader
+Set up the chess diagrams in a book on a board.
+
+1. **Open a page**: a photo of a book page (**Take a photo** opens the camera on a phone), a screenshot of an ebook, a scan, or a PDF (‹ › turn its pages; the page you were on is remembered). On a computer you can also drop a file on the page or paste a screenshot.
+2. Every diagram on the page is found, outlined and numbered; tap one to set it up on the board. Several diagrams on a page, of any size, are found, and photos that aren't quite square-on are straightened.
+3. Squares the reader wasn't sure of are outlined in orange. Compare with the diagram as printed (shown beside the board) and fix any square with **Fix a square**: pick a piece (or **Empty**), then tap squares.
+4. Choose who is to move (the side in check is picked for you, White otherwise), and **Flip** if the diagram shows Black at the bottom (that is guessed from the pawns and kings, as books nearly always print White at the bottom).
+5. Stockfish analyses the position: its evaluation, its line, and its move as an arrow. Tap or drag pieces to play through a line from the diagram; **‹ Back** (or ←) and **Diagram** go back. **Copy** the FEN, or open the position on Lichess to analyse it or play it out against the computer.
+
+If a diagram is missed, or its outline is off, **Add a board** (or **Corners** for the diagram on show) lets you drag its four corners onto the corners of the squares yourself.
+
+The reading uses [Watch Chess in 3D](https://github.com/huytd/watchchess3d)'s square classifier, a small CNN that reads each square as empty or one of the 12 pieces, and its way of finding a board (the strongest 8x8 light/dark checkerboard pattern, then the edges nudged until every cell's rim sits inside one square), ported to plain JavaScript and run in a Web Worker, so nothing is uploaded. For book pages it searches a small image pyramid and keeps every strong board, not just one; fits each corner on its own (perspective), on a blurred copy so hatched squares read as the grey they stand for; flattens hatched dark squares to flat grey before the squares are read (the CNN was trained on screen boards, and reads pieces on flat grey squares as well as anywhere); and decodes the readings with one king of each colour and no pawns on the first or last rank. Measured on 160 generated book pages with 271 diagrams (merida, alpha, leipzig and other sets): 249 were found, and 238 of those read without a mistake (0.15% of squares wrong, more than half of them outlined as unsure); every mistake was on hatched dark squares. The 22 missed (mostly faint hatching, or a board found as two half boards) need **Add a board**. Old, blurry scans are harder: on the 1921 diagrams of Capablanca's *Chess Fundamentals* a black piece on a hatched square is sometimes read as White's. Reading a diagram takes about a second on a laptop, a few on a phone.
+
 ## Development
 
 ```sh
 npm install
-npm run build   # writes docs/: index.html, img/, spot-the-danger.html, mistake-patterns.html, games.js, chess.js, whyblunder.js, patterns.js, stockfish.js + .wasm
+npm run build   # writes docs/: index.html, img/, spot-the-danger.html, mistake-patterns.html, book-reader.html, games.js, chess.js, whyblunder.js, patterns.js, diagrams.js, diagram-model.json, stockfish.js + .wasm
 ```
 
-- `src/line-vision.html`, `src/spot-the-danger.html`, `src/mistake-patterns.html` — page sources (CSS + JS), one per app. The build fills in `/*PIECES*/`, `/*COMMON*/` (`src/common.css`, styles shared by every drill), `<!--NAV-->` (links between drills) and `/*GAME_COUNT*/`. To add a drill, add its page to `APPS` in `scripts/build.js`.
+- `src/line-vision.html`, `src/spot-the-danger.html`, `src/mistake-patterns.html`, `src/book-reader.html` — page sources (CSS + JS), one per app. The build fills in `/*PIECES*/`, `/*COMMON*/` (`src/common.css`, styles shared by every drill), `<!--NAV-->` (links between drills) and `/*GAME_COUNT*/`. To add a drill, add its page to `APPS` in `scripts/build.js`.
 - `src/games.txt` — one line per source: `Name|1.e4 e5 2.Nf3 ...` (about 5,000 games). Names containing ` vs ` are shown as games, the rest as opening lines.
 - `scripts/build.js` — validates every move with chess.js and packs each game into `docs/games.js` at 2 characters per move; the page replays only the game it shows. Validated lines are cached in `node_modules/.cache`, so the first build takes under a minute and later ones are instant. Also copies the piece and board images (`assets/`) to `docs/img/`, chess.js to `docs/chess.js`, and copies the Stockfish.js lite single-threaded WASM engine to `docs/stockfish.js` + `docs/stockfish.wasm` (single-threaded, so it needs no cross-origin isolation headers; about 1.8 MB).
 
 - `src/patterns.js` — Mistake Patterns' analysis: game import, per-game analysis, pattern detection and the write-up. Copied to `docs/patterns.js`. It also runs in Node: `require('./src/patterns.js')(Chess, require('./docs/whyblunder.js'))`, with any engine that has `search(fen, depth, multipv)`.
+- `src/diagrams.js` — Book Reader's diagram finder and reader (Watch Chess in 3D's board search and CNN, ported). Copied to `docs/diagrams.js`; the page also runs it as its Web Worker. It runs in Node too: `const D = require('./src/diagrams.js'); D.readPage(img, D.makeClassifier(model))`.
+- `vendor/watchchess3d/` — Watch Chess in 3D's square classifier weights, unmodified (see its README for the commit), copied to `docs/diagram-model.json`.
 - `vendor/whyblunder/` — WhyBlunder's analysis modules, unmodified (see its README for the commit). The build bundles them with their own chess.js 0.10.3 into `docs/whyblunder.js`, which exposes one global, `WhyBlunder`.
 
 Line Vision picks lines uniformly over every slice of every game, skipping slices that overlap recently seen ones from the same game.
@@ -93,5 +110,7 @@ Move logic: [chess.js](https://github.com/jhlywa/chess.js) (BSD-2-Clause).
 Move analysis: [WhyBlunder](https://github.com/huytd/whyblunder) (move diagnostics, tactical recognition, opening book), with chess.js 0.10.3.
 
 Games: the [Lichess API](https://lichess.org/api) and the [Chess.com Published-Data API](https://www.chess.com/news/view/published-data-api).
+
+Diagram reading: the square classifier and board search of [Watch Chess in 3D](https://github.com/huytd/watchchess3d) (BSD 3-Clause). PDFs: [PDF.js](https://mozilla.github.io/pdf.js/) (Apache-2.0), loaded from cdnjs when a PDF is opened.
 
 Engine: [Stockfish.js](https://github.com/nmrugg/stockfish.js) 19 lite (GPLv3, license in `docs/stockfish-COPYING.txt`), based on [Stockfish](https://github.com/official-stockfish/Stockfish).

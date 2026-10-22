@@ -8,6 +8,8 @@
 //   (with its GPLv3 license) to docs/stockfish.js + docs/stockfish.wasm.
 // - Bundles WhyBlunder's analysis modules (vendor/whyblunder) into docs/whyblunder.js, and copies src/patterns.js
 //   (Mistake Patterns' analysis) to docs/patterns.js.
+// - Copies src/diagrams.js (Book Reader's diagram reader) to docs/diagrams.js and Watch Chess in 3D's square classifier
+//   (vendor/watchchess3d/model.json) to docs/diagram-model.json.
 // Usage: npm install && npm run build
 const fs = require('fs');
 const path = require('path');
@@ -68,6 +70,8 @@ const APPS = [
     description: 'Chess tactics training on master-game positions: spot the opponent\'s real threats, then the captures and checks that work for you, judged by Stockfish.' },
   { src: 'src/mistake-patterns.html', out: 'mistake-patterns.html', name: 'Mistake Patterns',
     description: 'Fetch your recent Lichess or Chess.com games, analyse them with Stockfish in your browser, and find the mistakes you keep making.' },
+  { src: 'src/book-reader.html', out: 'book-reader.html', name: 'Book Reader',
+    description: 'Photograph a chess book page, or open a PDF or screenshot: every diagram on it is recognised and set up on a board, with Stockfish analysis.' },
 ];
 const common = rd('src/common.css').trim();
 fs.mkdirSync(path.join(root, 'docs'), { recursive: true });
@@ -117,6 +121,9 @@ if(typeof module==='object'&&module.exports)module.exports=WhyBlunder;
 `;
 fs.writeFileSync(path.join(root, 'docs/whyblunder.js'), wbLib);
 fs.copyFileSync(path.join(root, 'src/patterns.js'), path.join(root, 'docs/patterns.js'));
+// 4c. Book Reader: the diagram reader (also its Web Worker) and Watch Chess in 3D's square classifier
+fs.copyFileSync(path.join(root, 'src/diagrams.js'), path.join(root, 'docs/diagrams.js'));
+fs.copyFileSync(path.join(root, 'vendor/watchchess3d/model.json'), path.join(root, 'docs/diagram-model.json'));
 
 // 5. Stockfish (single-threaded, so it runs without cross-origin isolation headers on GitHub Pages).
 //    The worker script finds its .wasm by swapping its own .js extension for .wasm.
