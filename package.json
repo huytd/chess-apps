@@ -7,6 +7,8 @@
   },
   "devDependencies": {
     "chess.js": "1.4.0",
+    "hyparquet": "1.31.5",
+    "hyparquet-compressors": "1.1.2",
     "stockfish": "19.0.0"
   }
 }

@@ -318,6 +318,23 @@ body{overflow:hidden}
 .pane-board .bar-top{margin:0 auto 4px}
 .pane-board .bar-steps{margin:4px auto 0}
 .cur-note{display:none;margin:0;font-size:14.5px;line-height:1.55}
+/* how the position on the board scored in master games: White wins, draws, Black wins */
+:root{--res-w:#F4EEE2;--res-w-ink:#221E18;--res-d:#A79D8B;--res-d-ink:#FFFFFF;--res-b:#2A2119;--res-b-ink:#F4EEE2}
+.res{max-width:min(640px, calc(100vh - 140px));margin:8px auto 0;font-size:12.5px;color:var(--muted)}
+.res[hidden]{display:none}
+.rbar{display:flex;height:20px;border-radius:6px;overflow:hidden;box-shadow:0 0 0 1px var(--line-strong);font:600 11.5px/20px var(--f-body);font-variant-numeric:tabular-nums}
+.rbar i{display:block;font-style:normal;text-align:center;white-space:nowrap;overflow:hidden;min-width:0;transition:flex-basis .2s ease-out}
+.rbar .w{background:var(--res-w);color:var(--res-w-ink)}
+.rbar .d{background:var(--res-d);color:var(--res-d-ink)}
+.rbar .b{background:var(--res-b);color:var(--res-b-ink)}
+.rcap{display:flex;justify-content:space-between;gap:8px;margin-top:4px}
+.rcap span:last-child{text-align:right}
+.res.few .rbar{opacity:.55}
+.mbar{display:inline-flex;width:56px;height:7px;border-radius:3px;overflow:hidden;vertical-align:middle;box-shadow:0 0 0 1px var(--line-strong);margin-right:6px}
+.mbar i{display:block}
+.mbar .w{background:var(--res-w)}.mbar .d{background:var(--res-d)}.mbar .b{background:var(--res-b)}
+.var .vstat{grid-column:1;font-size:12px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+.alt small{font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums}
 .cur-note b{font-family:var(--f-mono);font-weight:600;margin-right:6px}
 .now{font-family:var(--f-mono);font-size:14px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .now small{font-family:var(--f-body);font-weight:500;font-size:12.5px;color:var(--muted)}
@@ -359,13 +376,14 @@ body{overflow:hidden}
 
 /* a half-screen pane: the board on the left of the block that stays in view, the move's note beside it */
 @container (min-width:560px) and (max-width:839.98px){
-  .pane-board{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto 1fr;column-gap:20px;align-items:start;padding:10px 20px 12px}
-  .pane-board .board-shell{grid-column:1;grid-row:1 / span 3;--w:min(250px, (100dvh - var(--head-h) - 220px) / 1.112);min-width:0;
+  .pane-board{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto auto 1fr;column-gap:20px;align-items:start;padding:10px 20px 12px}
+  .pane-board .board-shell{grid-column:1;grid-row:1 / span 4;--w:min(250px, (100dvh - var(--head-h) - 220px) / 1.112);min-width:0;
     margin:calc(var(--w) * .052) calc(var(--w) * .062) calc(var(--w) * .101 + 4px)}
   .pane-board .board-bar{grid-column:2;margin:0;max-width:none;width:auto}
   .pane-board .bar-top{grid-row:1}
   .pane-board .bar-steps{grid-row:2;margin:2px 0 10px;justify-content:flex-start}
-  .cur-note{display:block;grid-column:2;grid-row:3}
+  .res{grid-column:2;grid-row:3;margin:0 0 12px;max-width:none;width:100%}
+  .cur-note{display:block;grid-column:2;grid-row:4}
 }
 
 /* a wide pane: the board stays beside the text, which keeps a readable measure */
@@ -434,12 +452,12 @@ const narrow=()=>matchMedia('(max-width:720px)').matches;
    sans/notes cover the whole line from move 1; own is where its annotated moves start (the moves before come from the
    line it branches from); at, for a variation or a linked opening, is the ply where it leaves that line. */
 function root(o,at){
-  return {o,title:o.name,sans:o.moves.map(m=>m[0]),notes:o.moves.map(m=>m[1]),own:0,idea:o.idea,vars:o.vars,at:at==null?null:at,side:o.side};
+  return {o,title:o.name,sans:o.moves.map(m=>m[0]),notes:o.moves.map(m=>m[1]),played:o.played||[],own:0,idea:o.idea,vars:o.vars,at:at==null?null:at,side:o.side};
 }
 function child(node,v){
   if(v.ref)return Object.assign(root(byId.get(v.ref),v.at),{parent:node});
   return {o:node.o,title:v.name,sans:node.sans.slice(0,v.at).concat(v.moves.map(m=>m[0])),notes:node.notes.slice(0,v.at).concat(v.moves.map(m=>m[1])),
-    own:v.at,idea:v.idea,vars:v.vars,at:v.at,side:node.side,parent:node,summary:v.summary};
+    played:node.played.slice(0,v.at).concat(v.played||[]),own:v.at,idea:v.idea,vars:v.vars,at:v.at,side:node.side,parent:node,summary:v.summary};
 }
 /* positions after each ply (0 = the start), with the last move's squares */
 function positions(sans){
@@ -447,6 +465,15 @@ function positions(sans){
   for(const s of sans){const m=c.move(s);out.push({fen:c.fen(),from:m.from,to:m.to});}
   return out;
 }
+/* results in master games (OPENING_STATS, from scripts/opening-stats.js): [White wins, draws, Black wins] or null */
+const STATS=typeof OPENING_STATS!=='undefined'?OPENING_STATS:null;
+const statsOf=fen=>STATS&&STATS.positions[fen.split(' ').slice(0,4).join(' ')]||null;
+const afterMove=(fen,san)=>{const c=new Chess(fen);c.move(san);return c.fen();};
+const total=r=>r?r[0]+r[1]+r[2]:0;
+const pct=(n,of)=>Math.round(100*n/of);
+const share=(n,of)=>{const x=100*n/of;return x<1?'<1':x<10?x.toFixed(x<9.95?1:0).replace(/\.0$/,''):Math.round(x)+'';};
+const nGames=n=>n.toLocaleString('en-US')+' game'+(n===1?'':'s');
+const miniBar=r=>{const n=total(r);return '<span class="mbar" aria-hidden="true">'+['w','d','b'].map((c,i)=>'<i class="'+c+'" style="width:'+(100*r[i]/n).toFixed(1)+'%"></i>').join('')+'</span>';};
 /* the first move of a variation, as it is played */
 const firstMove=(node,v)=>v.ref?byId.get(v.ref).moves[v.at][0]:v.moves[0][0];
 /* how many variations sit under a variation (for the "n more" hint) */
@@ -552,7 +579,8 @@ const indexPane=(function(){
     '<h2>Openings</h2><p class="lede">Pick one to learn it move by move: what every move is for, the idea behind the whole opening, and its main variations, each in a pane of its own.</p>'+
     '<div class="find"><input type="search" id="q" placeholder="Search: name, ECO code or moves" aria-label="Search openings" autocomplete="off">'+
     '<div class="chips" role="group" aria-label="Played by"><button class="btn" data-s="" aria-pressed="true">All</button><button class="btn" data-s="w" aria-pressed="false">For White</button><button class="btn" data-s="b" aria-pressed="false">For Black</button></div></div>'+
-    '<div id="list"></div><p class="credit">'+OPENINGS.length+' openings. Every move is checked with chess.js; ←/→ step through the line in the pane you are reading.</p></div>';
+    '<div id="list"></div><p class="credit">'+OPENINGS.length+' openings. Every move is checked with chess.js; ←/→ step through the line in the pane you are reading.'+
+    (STATS?' Results come from '+STATS.games.toLocaleString('en-US')+' over-the-board games between players rated '+STATS.minElo+'+, relayed on <a href="https://lichess.org/broadcast">Lichess Broadcasts</a> since 2020 (<a href="'+STATS.source+'">dataset</a>, CC BY-SA 4.0).':'')+'</p></div>';
   stackEl.appendChild(el);
   const pane={el,body:el.querySelector('.pane-body'),key:'',node:null};
   el.querySelector('.spine').onclick=()=>reveal(0,true);
@@ -584,7 +612,11 @@ $('list').addEventListener('click',e=>{const b=e.target.closest('.op');if(b)go(b
 
 /* ---------- a line's pane ---------- */
 function linePane(node,key,path,ply){
-  const k=panes.length, o=node.o, el=document.createElement('section');
+  const k=panes.length, o=node.o, el=document.createElement('section'), pos=positions(node.sans);
+  /* a variation's results: after its first move, and how often that move was chosen where it branches */
+  const vStats=v=>{const here=total(statsOf(pos[v.at].fen)), r=statsOf(afterMove(pos[v.at].fen,firstMove(node,v)));
+    const n=v.ref?(byId.get(v.ref).played||[])[v.at]:(v.played||[])[0];
+    return {r,share:here&&n?share(n,here):null};};
   el.className='pane line';el.setAttribute('aria-label',node.title);
   const parent=panes[k-1];
   const isVar=node.own>0&&node.parent, isRef=node.at!=null&&!isVar;
@@ -599,7 +631,8 @@ function linePane(node,key,path,ply){
   node.vars.forEach((v,i)=>{const a=Math.max(v.at,node.own);if(!altsAt.has(a))altsAt.set(a,[]);altsAt.get(a).push(i);});
   const altHtml=(p,cont)=>{const is=altsAt.get(p);if(!is)return '';
     return '<div class="alts">'+(cont?'Continue:':'Instead:')+is.map(i=>{const v=node.vars[i];
-      return '<button class="alt" data-v="'+i+'"><b>'+esc(label(v.at,firstMove(node,v)))+'</b><span>'+esc(v.name)+'</span></button>';}).join('')+'</div>';};
+      const st=vStats(v);
+      return '<button class="alt" data-v="'+i+'"><b>'+esc(label(v.at,firstMove(node,v)))+'</b><span>'+esc(v.name)+'</span>'+(st.share!=null?'<small title="How often masters chose this move here">'+st.share+'%</small>':'')+'</button>';}).join('')+'</div>';};
   if(node.own>0){
     mv+='<div class="prefix"><span>From '+esc(node.parent.title)+':</span>';
     for(let p=0;p<node.own;p++)mv+='<button class="pm" data-p="'+(p+1)+'">'+esc(p%2===0||p===0?label(p,node.sans[p]):node.sans[p])+'</button>';
@@ -610,9 +643,11 @@ function linePane(node,key,path,ply){
     mv+='<button class="mrow" data-p="'+(p+1)+'"><span class="san">'+(p%2===0?no+'.':'<i>'+no+'...</i>')+esc(node.sans[p])+'</span><span class="note">'+esc(node.notes[p])+'</span></button>'+altHtml(p,false);
   }
   mv+=altHtml(node.sans.length,true);
+  const varStat=v=>{const st=vStats(v), n=total(st.r);if(!n)return '';
+    return '<span class="vstat">'+miniBar(st.r)+nGames(n)+(st.share!=null?', chosen in '+st.share+'%':'')+' · White '+pct(st.r[0],n)+'%, draw '+pct(st.r[1],n)+'%, Black '+pct(st.r[2],n)+'%</span>';};
   const vars=node.vars.length?'<section class="sec"><h3 class="eyebrow">Variations</h3><div class="vars">'+node.vars.map((v,i)=>
     '<button class="var" data-v="'+i+'"><span class="vn"><b>'+esc(label(v.at,firstMove(node,v)))+'</b>'+esc(v.name)+(depth(v)?'<span class="deep">· '+depth(v)+' more inside</span>':'')+(v.ref?'<span class="deep">· opening</span>':'')+'</span>'+
-    '<span class="vs">'+esc(v.summary||'')+'</span><span class="go" aria-hidden="true">›</span></button>').join('')+'</div></section>':'';
+    '<span class="vs">'+esc(v.summary||'')+'</span>'+varStat(v)+'<span class="go" aria-hidden="true">›</span></button>').join('')+'</div></section>':'';
   el.innerHTML='<button class="spine" aria-label="Show '+esc(node.title)+'"><span>'+esc(node.title)+'</span></button><div class="pane-body"><div class="pane-inner">'+
     '<div class="pane-head"><div class="crumbs"><span class="eyebrow">'+esc(crumb)+'</span><span class="row"><button class="btn small ghost back" data-a="back">‹ '+esc(backTo)+'</button>'+
       '<button class="btn small ghost x" data-a="close" aria-label="Close" title="Close (Esc)">×</button></span></div>'+
@@ -622,7 +657,7 @@ function linePane(node,key,path,ply){
       '<div class="board-shell"><div class="board" role="img"></div><svg class="arrows" viewBox="0 0 8 8" aria-hidden="true"></svg></div>'+
       '<div class="board-bar bar-steps"><div class="steps"><button class="btn small" data-a="first" aria-label="To the start">⏮</button><button class="btn small" data-a="prev" aria-label="Previous move (←)">‹</button>'+
       '<span class="count" data-r="count"></span><button class="btn small" data-a="next" aria-label="Next move (→)">›</button><button class="btn small" data-a="last" aria-label="To the end">⏭</button></div></div>'+
-      '<p class="cur-note" data-r="note" aria-live="polite"></p></div>'+
+      '<div class="res" data-r="res"'+(STATS?'':' hidden')+'></div><p class="cur-note" data-r="note" aria-live="polite"></p></div>'+
     '<section class="sec idea"><h3 class="eyebrow">'+(isVar?'The idea of this variation':'The idea')+'</h3>'+node.idea.map(p=>'<p>'+esc(p)+'</p>').join('')+'</section>'+
     '<section class="sec moves"><h3 class="eyebrow">Move by move</h3>'+mv+'</section>'+vars+
     '<p class="end">'+(node.vars.length?'Pick a variation to open it beside this line.':'The end of this line.')+'</p></div></div>';
@@ -630,7 +665,7 @@ function linePane(node,key,path,ply){
   const boardEl=el.querySelector('.board'), sqEls=[];
   for(let d=0;d<64;d++){const s=document.createElement('div');s.className='sq';boardEl.appendChild(s);sqEls.push(s);}
   const pane={el,key,node,path,body:el.querySelector('.pane-body'),boardEl,boardBox:el.querySelector('.pane-board'),sqEls,
-    pos:positions(node.sans),ply:-1,flipped:o.side==='b'};
+    pos,ply:-1,flipped:o.side==='b'};
   el.addEventListener('click',e=>{
     const kk=panes.indexOf(pane);focusK=kk;
     if(e.target.closest('.spine')){reveal(kk,true);return;}
@@ -657,6 +692,7 @@ function setPly(pane,ply,scroll){
   const n=pane.node;
   pane.el.querySelector('[data-r="now"]').innerHTML=ply===0?'Start <small>· the initial position</small>':esc(label(ply-1,n.sans[ply-1]))+(ply-1<n.own?' <small>· before the variation</small>':'');
   pane.el.querySelector('[data-r="count"]').textContent=ply+' / '+n.sans.length;
+  renderRes(pane);
   pane.el.querySelector('[data-r="note"]').innerHTML=ply===0?'The starting position. Step through the line with › or →.':
     ply-1<n.own?'Played before the variation, in '+esc(n.parent.title)+'.':'<b>'+esc(label(ply-1,n.sans[ply-1]))+'</b>'+esc(n.notes[ply-1]);
   pane.el.querySelectorAll('.mrow,.pm').forEach(r=>{const p=+r.dataset.p;r.classList.toggle('cur',p===ply);r.classList.toggle('later',p>ply);});
@@ -667,6 +703,22 @@ function setPly(pane,ply,scroll){
 /* The part of the pane the move list shows: below the board when the board stays above it (one column), the whole
    height when it sits beside it. The current move is kept out of the top and bottom edges, and when it has to move it
    lands a third of the way down, so the moves that follow it are in view too. */
+/* the bar under the board: how the position on show scored in master games */
+function renderRes(pane){
+  const el=pane.el.querySelector('[data-r="res"]');if(!STATS)return;
+  const r=statsOf(pane.pos[pane.ply].fen), n=total(r);
+  el.classList.toggle('few',n>0&&n<30);
+  if(!n){el.innerHTML='<div class="rcap"><span>No master game in the database reached this position.</span></div>';return;}
+  const p=r.map(x=>100*x/n), lab=x=>x>=13?Math.round(x)+'%':'';
+  el.innerHTML='<div class="rbar" role="img" aria-label="In '+nGames(n)+': White won '+Math.round(p[0])+'%, '+Math.round(p[1])+'% were drawn, Black won '+Math.round(p[2])+'%">'+
+    '<i class="w" style="flex-basis:'+p[0].toFixed(2)+'%">'+lab(p[0])+'</i><i class="d" style="flex-basis:'+p[1].toFixed(2)+'%">'+lab(p[1])+'</i><i class="b" style="flex-basis:'+p[2].toFixed(2)+'%">'+lab(p[2])+'</i></div>'+
+    '<div class="rcap"><span>White · Draw · Black</span><span title="Over-the-board games relayed on Lichess Broadcasts since 2020, both players rated '+STATS.minElo+'+">'+nGames(n)+(n<30?', too few to go by':'')+chosen(pane)+'</span></div>';
+}
+/* how often the move just played was chosen in the position before it */
+function chosen(pane){
+  const p=pane.ply-1, n=pane.node.played[p], here=p>=0?total(statsOf(pane.pos[p].fen)):0;
+  return n&&here?' · '+esc(pane.node.sans[p])+' chosen in '+share(n,here)+'%':'';
+}
 function keepInView(pane,onlyIfHidden){
   const row=pane.el.querySelector('.mrow.cur')||(pane.el.querySelector('.pm.cur')&&pane.el.querySelector('.prefix'));
   if(!row)return;
